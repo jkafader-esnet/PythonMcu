@@ -112,6 +112,7 @@ class MidiConnection:
 
         for dev_id in range(pygame.midi.get_count()):
             device = pygame.midi.get_device_info(dev_id)
+            print(device)
             if device[2] == 1:
                 # noinspection PyUnresolvedReferences
                 midi_inputs.append(device[1].decode('utf8'))

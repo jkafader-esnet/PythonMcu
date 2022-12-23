@@ -34,11 +34,11 @@ if __name__ == "__main__":
 from PythonMcu.Hardware.MidiControllerTemplate import MidiControllerTemplate
 from PythonMcu.Midi.MidiConnection import MidiConnection
 
+class NektarPanoramaTSeries(MidiControllerTemplate):
+    FORMATTED_NAME = "Nektar Panorama T4/T6"
 
-class NovationZeROSLMkII(MidiControllerTemplate):
-    FORMATTED_NAME = "Novation ZeRO SL MkII"
-    # Novation Digital Music System
-    MIDI_MANUFACTURER_ID = [0x00, 0x20, 0x29]
+    # Nektar Technology Inc -- lookup here: https://www.midi.org/specifications/midi-reference-tables/manufacturer-sysex-id-numbers
+    MIDI_MANUFACTURER_ID = [0x00, 0x01, 0x77]
 
     # MIDI device ID and initialisation of Novation ZeRO SL Mkii
     MIDI_DEVICE_ID = [0x03, 0x03, 0x12, 0x00, 0x04, 0x00]
@@ -93,8 +93,70 @@ class NovationZeROSLMkII(MidiControllerTemplate):
     _MODE_OTHER_GLOBAL_VIEW = 4
     _MODE_OTHER_UTILITY = 5
 
-    def __init__(self, midi_input, midi_output, callback_log):
-        MidiControllerTemplate.__init__(self, midi_input, midi_output, callback_log)
+    def __init__(self, midi_input, midi_output, callback_log, patch):
+        super().__init__(midi_input, midi_output, callback_log)
+
+        self.controls = {
+            0: {"name": "Fader 1", "set": self.set_track_volume(0) },
+            1: {"name": "Fader 2", "set": self.set_track_volume(1) },
+            2: {"name": "Fader 3", "set": self.set_track_volume(2) },
+            3: {"name": "Fader 4", "set": self.set_track_volume(3) },
+            4: {"name": "Fader 5", "set": self.set_track_volume(4) },
+            5: {"name": "Fader 6", "set": self.set_track_volume(5) },
+            6: {"name": "Fader 7", "set": self.set_track_volume(6) },
+            7: {"name": "Fader 8", "set": self.set_track_volume(7) },
+
+            16: { "name": "Track 1 Button", "set": self.toggle_function(1) },
+            17: { "name": "Track 2 Button", "set": self.toggle_function(2) },
+            18: { "name": "Track 3 Button", "set": self.toggle_function(3) },
+            19: { "name": "Track 4 Button", "set": self.toggle_function(4) },
+            20: { "name": "Track 5 Button", "set": self.toggle_function(5) },
+            21: { "name": "Track 6 Button", "set": self.toggle_function(6) },
+            22: { "name": "Track 7 Button", "set": self.toggle_function(7) },
+            23: { "name": "Track 8 Button", "set": self.toggle_function(8) },
+
+            94: { "name": "Track Master Button", "set": self.panic },
+            96: { "name": "Shift", "set": self.shift_mode },
+
+            80: { "name": "Transport: Loop", "set": self.unmapped },
+            81: { "name": "Transport: Reverse", "set": self.unmapped },
+            82: { "name": "Transport: Forward", "set": self.unmapped },
+            83: { "name": "Transport: Stop", "set": self.unmapped },
+            84: { "name": "Transport: Play", "set": self.unmapped },
+            85: { "name": "Transport: Record", "set": self.unmapped },
+
+            92: {"name": "Track-",      "set": self.change_instrument(direction=1) },
+            92: {"name": "Track+",      "set": self.change_instrument(direction=-1) },
+            94: {"name": "Browser",     "set": self.patch_list },
+            95: {"name": "View",        "set": self.toggle_view },
+            99:  {"name": "Mixer",      "set": self.display_settings_page("Instrument 1") },
+            100: {"name": "Instrument", "set": self.display_settings_page("Instrument 2") },
+            101: {"name": "Multi",      "set": self.display_settings_page("Routing/Effects")},
+            101: {"name": "Internal",   "set": self.display_settings_page("Routing/Effects")},
+        }
+        patches ={
+            "synth": {
+                0: {"name": "VCA  Attack",  "set": self.vtrack_setter(0), "value": 91 },
+                1: {"name": "VCA  Decay",   "set": self.vtrack_setter(1), "value": 91 },
+                2: {"name": "VCA  Sustain", "set": self.vtrack_setter(2), "value": 91 },
+                3: {"name": "VCA  Release", "set": self.vtrack_setter(3), "value": 91 },
+                4: {"name": "VCF  Attack",  "set": self.vtrack_setter(4), "value": 91 },
+                5: {"name": "VCF  Decay",   "set": self.vtrack_setter(5), "value": 91 },
+                6: {"name": "VCF  Sustain", "set": self.vtrack_setter(6), "value": 91 },
+                7: {"name": "VCF  Release", "set": self.vtrack_setter(7), "value": 91 },
+            },
+            "hammond": {
+                0: {"name": "Draw [16']",     "set": self.vtrack_setter(0, invert=True), "value": 91 },
+                1: {"name": "Draw [5  1/3']", "set": self.vtrack_setter(1, invert=True), "value": 91 },
+                2: {"name": "Draw [8']",      "set": self.vtrack_setter(2, invert=True), "value": 91 },
+                3: {"name": "Draw [4']",      "set": self.vtrack_setter(3, invert=True), "value": 91 },
+                4: {"name": "Draw [2  2/3']", "set": self.vtrack_setter(4, invert=True), "value": 91 },
+                5: {"name": "Draw [2']",      "set": self.vtrack_setter(5, invert=True), "value": 91 },
+                6: {"name": "Draw [1  3/5']", "set": self.vtrack_setter(6, invert=True), "value": 91 },
+                7: {"name": "Draw [1  1/3']", "set": self.vtrack_setter(7, invert=True), "value": 91 },
+            }
+        } 
+        self.tracks = patches[patch]
 
         self.display_lcd_available = True
         self.automated_faders_available = False
@@ -113,6 +175,48 @@ class NovationZeROSLMkII(MidiControllerTemplate):
         self._mode_automap = False
 
         self._is_connected = False
+        self.standard_syx_header = [0x00, 0x01, 0x77, 0x7F, 0x01]
+        self.midi = MidiConnection(callback_log, self.receive_midi)
+
+    def toggle_function(self, num):
+        pass
+
+    def panic(self):
+        pass
+
+    def shift_mode(self, bool):
+        pass
+
+    def unmapped(self, *args, **kwargs):
+        pass
+
+    def change_instrument(self, *args, **kwargs):
+        pass
+
+    def patch_list(self, *args, **kwargs):
+        pass
+
+    def toggle_view(self, *args, **kwargs):
+        pass
+
+    def display_settings_page(self, *args, **kwargs):
+        pass
+
+    def set_track_volume(self, track_number):
+        def set(value):
+            self.tracks[track_number]["set"](value)
+        return set
+
+    def set_vtrack_value(self, fader_number, value):
+        self.midi.send(0xB0, fader_number, value)
+
+    def vtrack_setter(self, track_number, invert=False):
+        def set(value):
+            if invert:
+                value = 127 - value
+            self.tracks[track_number]["value"] = value
+            self.set_vtrack_value(track_number, value)
+        return set
 
     @staticmethod
     def get_usage_hint():
@@ -120,35 +224,241 @@ class NovationZeROSLMkII(MidiControllerTemplate):
                'and switch to preset #32 (Ableton Live Automap).'
 
     def _log(self, message, repaint=False):
-        self.callback_log('[Novation ZeRO SL MkII]  ' + message, repaint)
+        self.callback_log('[Nektar Panorama T6]  ' + message, repaint)
+
+    def initialize_controls(self):
+        # B0 63 7F
+        self.midi.send(0xB0, 0x63, 0x7F)
+        # F0 00 01 77 7F 01                      F7 (header)
+        # F0 00 01 77 7F 01 0D 04 00 00 01 00 6D F7
+        data = [0x0D, 0x04, 0x00, 0x00, 0x01, 0x00, 0x6D]
+        self.midi.send_sysex(self.standard_syx_header, data)
+        # F0 00 01 77 7F 01                F7 (header)
+        # F0 00 01 77 7F 01 06 02 7F 00 00 F7
+        data = [0x0D, 0x04, 0x00, 0x00, 0x01, 0x00, 0x6D]
+        self.midi.send_sysex(self.standard_syx_header, data)
+        # B0 00 00
+        group_1 = [i for i in range(0x00, 0x08)]
+        group_2 = [i for i in range(0x30, 0x38)]
+        group_3 = [i for i in range(0x10, 0x18)]
+        group_4 = [i for i in range(0x38, 0x40)]
+        controls = group_1 + [ 0x6A, ] + group_2 + group_3 + group_4
+        print(controls)
+        for control in controls:
+            self.midi.send(0xB0, control, 0x00)
+        # F0 00 01 77 7F 01                                  F7 (header)
+        # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
+        data = [0x06, 0x00, 0x01, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x03, 0x00]
+        self.midi.send_sysex(self.standard_syx_header, data)
+        # B0 19 01 
+        self.midi.send(0xB0, 0x19, 0x01)
+        # F0 00 01 77 7F 01                      F7 (header)
+        # F0 00 01 77 7F 01 0D 01 00 00 01 01 6F F7
+        data = [0x0D, 0x01, 0x00, 0x00, 0x01, 0x01, 0x6F]
+        self.midi.send_sysex(self.standard_syx_header, data)
+        # F0 00 01 77 7F 01                F7 (header)
+        # F0 00 01 77 7F 01 06 02 7F 00 00 F7
+        data = [0x06, 0x02, 0x7F, 0x00, 0x00]
+        self.midi.send_sysex(self.standard_syx_header, data)
+
+        controls = group_1 + group_2 + [0x08] + group_3 + group_4
+        print(controls)
+        for control in controls:
+            self.midi.send(0xB0, control, 0x00)
+        # this was a *Response* not an instruction.
+        # F0 00 01 77 7F 01!                     F7 (header)
+        # F0 00 01 77 7F 02 09 06 00 00 01 36 38 F7
+        #header = [0x00, 0x01, 0x77, 0x7F, 0x02]
+        #data = [0x09, 0x06, 0x00, 0x00, 0x01, 0x36, 0x38]
+        #self.midi.send_sysex(header, data)
+        # B0 19 01
+        self.midi.send(0xB0, 0x19, 0x01)
+        # we are fully in "MCU mode" at this point
+        # so what does this do? color for something? lights? selection?
+        # F0 00 01 77 7F 01                      F7 (header)
+        # F0 00 01 77 7F 01 0F 06 01 01 01 00 67 F7
+        data = [0x0F, 0x06, 0x01, 0x01, 0x01, 0x00, 0x67]
+        self.midi.send_sysex(self.standard_syx_header, data)
+        # and this?
+        # F0 00 01 77 7F 01                                  F7 (header)
+        # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
+        data = [0x06, 0x00, 0x01, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x03, 0x00]
+        self.midi.send_sysex(self.standard_syx_header, data)
+
+        self.set_track_names([track['name'] for num, track in self.tracks.items()])
+        self.set_button_labels(['SOUND1', 'SOUND2', '', 'FX', ''])
+        for key, track in self.tracks.items():
+            track['set'](track['value'])
+
+        self.set_active_track(1)
+
+    def sysex_layers(self):
+        more_syx_header = [0x06, 0x00]
+        layers = [
+            0x01, # unknown. Has 3 parts: 01 00 00, 02 00 00, 03 00 F7
+            #                                        len data                       term
+            0x02, # Top Menu Name. Has 1 part:    01  09 46 49 52 53 54 20 56 6F 6C F7
+            #                                        len data           term
+            0x03, # Top Menu Value. Has 1 part:   01  05 2B 31 32 2E 30 F7
+            0x04, # Soft button names. Has 4 parts: 1: 04 00 2: 04 00 00 00 3: 01 00 4: 01 (then strings)
+            0x05, # Unknown. Has 1 part: 01 00 F7
+            0x06, # Track names 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
+            0x06, # Track names 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
+            0x07, # pan values 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
+            0x07, # pan values 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
+        ]
+
+        for layer in layers:
+            message = 
+            self.midi.send_sysex(self.standard_syx_header + more_syx_header, )
+
+    def pan_mode(self):
+        # F0 00 01 77 7F 01 06 10 7F 00 00 F7
+
+        # set track pan display
+        tracks = [
+            0x30: 0x40,
+            0x31: 0x40,
+            0x32: 0x40,
+            0x33: 0x40,
+            0x34: 0x00,
+            0x35: 0x00,
+            0x36: 0x00,
+            0x37: 0x00,
+
+            0x6A: 0x00,
+
+            0x10: 0x00,
+            0x11: 0x00,
+            0x12: 0x00,
+            0x13: 0x00,
+            0x14: 0x00,
+            0x15: 0x00,
+            0x16: 0x00,
+            0x17: 0x00,
+
+            0x38: 0x00,
+            0x39: 0x00,
+            0x3A: 0x00,
+            0x3B: 0x00,
+            0x3C: 0x00,
+            0x3D: 0x00,
+            0x3E: 0x00,
+            0x3F: 0x00,
+        ]
+        for track, pan_value in tracks.items():
+            self.midi.send([0xB0, track, pan_value])
+
+        # finally, send highlight for soft button 1:
+        self.midi.send([0xB0, 0x6A, 0x7F])
+
+
+    def set_button_labels(self, labels):
+        # full packet
+        # F0 00 01 77 7F 01 06 00 04 00 04 00 00 00 01 00 01 03 50 41 4E 00 02 05 53 45 4E 44 53 00 03 00 00 04 05 57 52 49 54 45 00 05 00 F7
+        # F0 00 01 77 7F 01 (header)
+        # 06 00 04 00 04 00 00 00 01 00  # unknown
+        # 01 (first label)
+        # 03 len(label1)
+        # 50 41 4E 00 ("PAN\0")
+        # 02 (second label)
+        # 05 len(label2))
+        # 53 45 4E 44 53 00 ("SENDS\0")
+        # 03 (third label)
+        # 00 (zero length)
+        # 00 (empty string)
+        # 04 (fourth label)
+        # 05 57 52 49 54 45 00 
+        # 05 (fifth label?)
+        # 00 (zero length)
+        # (no nul!)
+
+        # need some error handling here: this list must have exactly 5 elements (last is empty string)
+                   #T6?  PAD   L4BTN ?     ?     ?     ?     ?     ?     ? 
+        message = [0x06, 0x00, 0x04, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00]
+        offset = 1
+        for name in labels:
+            button_num = 0x00 + offset
+            message.append(button_num)
+            name = name.upper().encode('ascii')
+            length = len(name)
+            message.append(length)
+            message += [char for char in name]
+            offset += 1
+            if(offset <= len(labels)):
+                message.append(0x00)
+
+        self.midi.send_sysex(self.standard_syx_header, message)
+
+    def set_track_names(self, track_names):
+        # unknown
+        # F0 00 01 77 7F 01                         F7 (header)
+        # full packet
+        # F0 00 01 77 7F 01 06 00 06 09 05 46 49 52 53 54 00 0A 06 53 45 43 4F 4E 44 00 0B 09 31 32 33 34 35 36 37 38 39 00 0C 05 54 48 49 52 44 F7
+        # F0 00 01 77 7F 01 (header)
+        # 06 00 06
+        # 09 (first track)  
+        # 05 (len(name))
+        # 46 49 52 53 54 00 ("FIRST\0")
+        # 0A (second track)
+        # 06 (len(name))
+        # 53 45 43 4F 4E 44 00 ("SECOND\0")
+        # 0B (third track)
+        # 09 (len(name))
+        # 31 32 33 34 35 36 37 38 39 00 ("123456789\0")
+        # 0C (fourth track)
+        # 05 (len(name))
+        # 54 48 49 52 44 ("THIRD") (no nul!)
+        # F7 (end of message)
+        message = 0x06.to_bytes(1, 'big')
+        message += 0x00.to_bytes(1, 'big')
+        message += 0x06.to_bytes(1, 'big')
+        offset = 0
+        for name in track_names:
+            track_num = 0x09 + offset
+            message += track_num.to_bytes(1, 'big')
+            name = name.upper().encode('ascii')
+            length = len(name)
+            message += length.to_bytes(1, 'big')
+            message += name
+            offset += 1
+            if(offset < len(track_names)):
+                message += 0x00.to_bytes(1, 'big')
+
+        data = [c for c in message]
+        self.midi.send_sysex(self.standard_syx_header, data)
+
+    def set_active_track(self, track):
+        self.midi.send(0xB0, 0x19, track)
+        pass
 
     # --- initialisation ---
     def connect(self):
         MidiControllerTemplate.connect(self)
         self._is_connected = True
 
-        self.set_lcd_directly(0, 'Novation ZeRO SL MkII:  initialising...')
-        self.set_lcd_directly(1, 'Mackie Host Control:    connecting...')
+        #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialising...')
+        #self.set_lcd_directly(1, 'Mackie Host Control:    connecting...')
 
-        self._enter_ableton_mode()
+        self._enter_mcu_mode()
 
         # select "track" mode ("Mute" + "Solo")
-        self._mode_track = self._MODE_TRACK_MUTE_SOLO
-        self._restore_previous_mode()
+        #self._mode_track = self._MODE_TRACK_MUTE_SOLO
+        #self._restore_previous_mode()
 
-        self.set_lcd_directly(0, 'Novation ZeRO SL MkII:  initialised.')
+       # self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
 
         self._log('Connected.', True)
 
     def disconnect(self):
         self._log('Disconnecting...', True)
 
-        self.withdraw_all_controls()
+        #self.withdraw_all_controls()
 
-        self.set_lcd_directly(0, 'Novation ZeRO SL MkII:  disconnecting...')
-        self.set_lcd_directly(1, '')
+        #self.set_lcd_directly(0, 'Nektar Panorama T6:  disconnecting...')
+        #self.set_lcd_directly(1, '')
 
-        self._leave_ableton_mode()
+        self._leave_mcu_mode()
 
         self._is_connected = False
         MidiControllerTemplate.disconnect(self)
@@ -156,124 +466,166 @@ class NovationZeROSLMkII(MidiControllerTemplate):
     def go_online(self):
         MidiControllerTemplate.go_online(self)
 
-        self.set_lcd_directly(0, 'Novation ZeRO SL MkII:  initialised.')
-        self.set_lcd_directly(1, 'Mackie Host Control:    online.')
+        #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
+        #self.set_lcd_directly(1, 'Mackie Host Control:    online.')
 
     def go_offline(self):
         MidiControllerTemplate.go_offline(self)
 
-        self.set_lcd_directly(0, 'Novation ZeRO SL MkII:  initialised.')
-        self.set_lcd_directly(1, 'Mackie Host Control:    offline.')
+        #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
+        #self.set_lcd_directly(1, 'Mackie Host Control:    offline.')
 
-    def _enter_ableton_mode(self):
-        self._log('Entering "Ableton" mode...', True)
+    def send_handshake(self):
+        # F0 7E 7F 06 01 F7
 
-        self.send_midi_sysex([0x01, 0x01])
+        header = [0x7E, 0x7F]
+        data = [0x06, 0x01]
 
+        self.midi.send_sysex(header, data)
+
+        #F0 00 01 77 7F 01 09 06 00 00 01 36 39 F7
+
+        header = [0x00, 0x01, 0x77, 0x7F, 0x01, 0x09]
+        data = [0x06, 0x00, 0x00, 0x01, 0x36, 0x39]
+
+        self.midi.send_sysex(header, data)
+
+    def send_disconnect(self):
+        #F0 00 01 77 7F 01 09 00 00 00 01 00 75 F7
+        header = [0x00, 0x01, 0x77, 0x7F, 0x01, 0x09] # XXX: probably
+        data = [0x00, 0x00, 0x00, 0x01, 0x00, 0x75] # unknown
+        
+        self.midi.send_sysex(header, data)
+
+    def _enter_mcu_mode(self):
+        self._log('Entering "MCU" mode...', True)
+
+        self.send_handshake()
+        self.initialize_controls()
+
+        # probably some other stuff to do here, but not this...
         # clear all LEDs and switch off "transport" mode
-        self.send_midi_control_change(cc_number=self._MIDI_CC_CLEAR_ALL_LEDS, cc_value=0x00)
-        self.send_midi_control_change(cc_number=self._MIDI_CC_BUTTON_MODE_TRANSPORT, cc_value=0x00)
+        #self.send_midi_control_change(cc_number=self._MIDI_CC_CLEAR_ALL_LEDS, cc_value=0x00)
+        #self.send_midi_control_change(cc_number=self._MIDI_CC_BUTTON_MODE_TRANSPORT, cc_value=0x00)
 
-    def _leave_ableton_mode(self):
-        self._log('Leaving "Ableton" mode...', True)
+    def _leave_mcu_mode(self):
+        self._log('Leaving "MCU" mode...', True)
 
-        self.send_midi_sysex([0x02, 0x02, 0x05])
-        self.send_midi_sysex([0x01, 0x00])
+        self.send_disconnect()
 
+        # probably some other stuff to do here, but not this...
         # clear all LEDs and switch off "transport" mode
-        self.send_midi_control_change(cc_number=self._MIDI_CC_CLEAR_ALL_LEDS, cc_value=0x00)
-        self.send_midi_control_change(cc_number=self._MIDI_CC_BUTTON_MODE_TRANSPORT, cc_value=0x00)
+        #self.send_midi_control_change(cc_number=self._MIDI_CC_CLEAR_ALL_LEDS, cc_value=0x00)
+        #self.send_midi_control_change(cc_number=self._MIDI_CC_BUTTON_MODE_TRANSPORT, cc_value=0x00)
+
+    def process_control(self, control, value):
+        if control in self.controls:
+            print("Mapped control [%s]: %s" % (control, value))
+            self.controls[control]["set"](value)
+        else:
+            print("Unmapped Control [%s]: %s" % (control, value))
+        pass
+
+    def process_sysex(self, message):
+        print("process_sysex", message)
+        pass
 
     # --- MIDI processing ---
     def receive_midi(self, status, message):
-        if (message[0] == 0xF0) and (message[-1] == 0xF7):
-            if (message[1:4] == self.MIDI_MANUFACTURER_ID) and (message[4:10] == self.MIDI_DEVICE_ID):
-                sysex_message = message[10:-1]
+        if message[0] == 0xF0 and message[-1] == 0xF7:
+            self.process_sysex(message=message)
+        if message[0] == 0xB0:
+            self.process_control(control=message[1], value=message[2])
 
-                if sysex_message == [1, 0]:
-                    self._leave_ableton_mode()
+        pass
+    #     if (message[0] == 0xF0) and (message[-1] == 0xF7):
+    #         if (message[1:4] == self.MIDI_MANUFACTURER_ID) and (message[4:10] == self.MIDI_DEVICE_ID):
+    #             sysex_message = message[10:-1]
 
-                    self._mode_automap = True
-                    self._is_connected = False
-                elif sysex_message == [1, 1]:
-                    if self._mode_automap:
-                        self._mode_automap = False
-                        self._is_connected = True
+    #             if sysex_message == [1, 0]:
+    #                 self._leave_mcu_mode()
 
-                        self._enter_ableton_mode()
+    #                 self._mode_automap = True
+    #                 self._is_connected = False
+    #             elif sysex_message == [1, 1]:
+    #                 if self._mode_automap:
+    #                     self._mode_automap = False
+    #                     self._is_connected = True
 
-                        self._restore_previous_mode()
-                        self._restore_vpots()
+    #                     self._enter_mcu_mode()
 
-                        # force update of LCD
-                        self._lcd_strings = ['', '']
-                        self.update_lcd()
+    #                     self._restore_previous_mode()
+    #                     self._restore_vpots()
 
-            # all MIDI SysEx messages handled (including invalid
-            # ones), so quit processing here
-            return
+    #                     # force update of LCD
+    #                     self._lcd_strings = ['', '']
+    #                     self.update_lcd()
 
-        if not self._is_connected:
-            return
+    #         # all MIDI SysEx messages handled (including invalid
+    #         # ones), so quit processing here
+    #         return
 
-        cc_selector = {
-            self._MIDI_CC_FADERS: 'self.interconnector.move_fader_7bit(0, %d)',
-            self._MIDI_CC_FADERS + 1: 'self.interconnector.move_fader_7bit(1, %d)',
-            self._MIDI_CC_FADERS + 2: 'self.interconnector.move_fader_7bit(2, %d)',
-            self._MIDI_CC_FADERS + 3: 'self.interconnector.move_fader_7bit(3, %d)',
-            self._MIDI_CC_FADERS + 4: 'self.interconnector.move_fader_7bit(4, %d)',
-            self._MIDI_CC_FADERS + 5: 'self.interconnector.move_fader_7bit(5, %d)',
-            self._MIDI_CC_FADERS + 6: 'self.interconnector.move_fader_7bit(6, %d)',
-            self._MIDI_CC_FADERS + 7: 'self.interconnector.move_fader_7bit(7, %d)',
-            self._MIDI_CC_ENCODERS: 'self.interconnector.move_vpot_raw(0, %d)',
-            self._MIDI_CC_ENCODERS + 1: 'self.interconnector.move_vpot_raw(1, %d)',
-            self._MIDI_CC_ENCODERS + 2: 'self.interconnector.move_vpot_raw(2, %d)',
-            self._MIDI_CC_ENCODERS + 3: 'self.interconnector.move_vpot_raw(3, %d)',
-            self._MIDI_CC_ENCODERS + 4: 'self.interconnector.move_vpot_raw(4, %d)',
-            self._MIDI_CC_ENCODERS + 5: 'self.interconnector.move_vpot_raw(5, %d)',
-            self._MIDI_CC_ENCODERS + 6: 'self.interconnector.move_vpot_raw(6, %d)',
-            self._MIDI_CC_ENCODERS + 7: 'self.interconnector.move_vpot_raw(7, %d)',
-            self._MIDI_CC_CONTROL_PEDAL: 'self.on_control_pedal(%d & 0x01)',
-            self._MIDI_CC_BUTTON_BANK_UP: 'self._change_mode_edit(%d & 0x01)',
-            self._MIDI_CC_BUTTON_BANK_DOWN: 'self._change_mode_track(%d & 0x01)',
-            self._MIDI_CC_BUTTONS_RIGHT_BOTTOM: 'self._change_mode_bank(%d & 0x01)',
-            self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 1: 'self._change_mode_automation(%d & 0x01)',
-            self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 2: 'self._change_mode_global_view(%d & 0x01)',
-            self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 3: 'self._change_mode_utility(%d & 0x01)',
-            self._MIDI_CC_BUTTON_MODE_TRANSPORT: 'self._change_mode_transport(%d & 0x01)',
-        }
+    #     if not self._is_connected:
+    #         return
 
-        # make sure that no submenu disturbs toggling the "Global
-        # View" mode
-        if self._mode_other == self._MODE_OTHER_GLOBAL_VIEW:
-            del cc_selector[self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 1]
+    #     cc_selector = {
+    #         self._MIDI_CC_FADERS: 'self.interconnector.move_fader_7bit(0, %d)',
+    #         self._MIDI_CC_FADERS + 1: 'self.interconnector.move_fader_7bit(1, %d)',
+    #         self._MIDI_CC_FADERS + 2: 'self.interconnector.move_fader_7bit(2, %d)',
+    #         self._MIDI_CC_FADERS + 3: 'self.interconnector.move_fader_7bit(3, %d)',
+    #         self._MIDI_CC_FADERS + 4: 'self.interconnector.move_fader_7bit(4, %d)',
+    #         self._MIDI_CC_FADERS + 5: 'self.interconnector.move_fader_7bit(5, %d)',
+    #         self._MIDI_CC_FADERS + 6: 'self.interconnector.move_fader_7bit(6, %d)',
+    #         self._MIDI_CC_FADERS + 7: 'self.interconnector.move_fader_7bit(7, %d)',
+    #         self._MIDI_CC_ENCODERS: 'self.interconnector.move_vpot_raw(0, %d)',
+    #         self._MIDI_CC_ENCODERS + 1: 'self.interconnector.move_vpot_raw(1, %d)',
+    #         self._MIDI_CC_ENCODERS + 2: 'self.interconnector.move_vpot_raw(2, %d)',
+    #         self._MIDI_CC_ENCODERS + 3: 'self.interconnector.move_vpot_raw(3, %d)',
+    #         self._MIDI_CC_ENCODERS + 4: 'self.interconnector.move_vpot_raw(4, %d)',
+    #         self._MIDI_CC_ENCODERS + 5: 'self.interconnector.move_vpot_raw(5, %d)',
+    #         self._MIDI_CC_ENCODERS + 6: 'self.interconnector.move_vpot_raw(6, %d)',
+    #         self._MIDI_CC_ENCODERS + 7: 'self.interconnector.move_vpot_raw(7, %d)',
+    #         self._MIDI_CC_CONTROL_PEDAL: 'self.on_control_pedal(%d & 0x01)',
+    #         self._MIDI_CC_BUTTON_BANK_UP: 'self._change_mode_edit(%d & 0x01)',
+    #         self._MIDI_CC_BUTTON_BANK_DOWN: 'self._change_mode_track(%d & 0x01)',
+    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM: 'self._change_mode_bank(%d & 0x01)',
+    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 1: 'self._change_mode_automation(%d & 0x01)',
+    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 2: 'self._change_mode_global_view(%d & 0x01)',
+    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 3: 'self._change_mode_utility(%d & 0x01)',
+    #         self._MIDI_CC_BUTTON_MODE_TRANSPORT: 'self._change_mode_transport(%d & 0x01)',
+    #     }
 
-        if status == (MidiConnection.CONTROL_CHANGE + self._MIDI_DEVICE_CHANNEL):
-            cc_number = message[1]
-            cc_value = message[2]
+    #     # make sure that no submenu disturbs toggling the "Global
+    #     # View" mode
+    #     if self._mode_other == self._MODE_OTHER_GLOBAL_VIEW:
+    #         del cc_selector[self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 1]
 
-            if cc_number in cc_selector:
-                eval(cc_selector[cc_number] % cc_value)
-            elif cc_number == 0x6B:
-                # this controller change message is sent on entering
-                # and leaving "Automap" mode and can be probably
-                # ignored
-                pass
-            else:
-                internal_id = 'cc%d' % cc_number
-                status = cc_value & 0x01
-                key_processed = self.interconnector.keypress(internal_id, status)
+    #     if status == (MidiConnection.CONTROL_CHANGE + self._MIDI_DEVICE_CHANNEL):
+    #         cc_number = message[1]
+    #         cc_value = message[2]
 
-                if not key_processed:
-                    message_string = ['status %02X: ' % status]
-                    for byte in message:
-                        message_string.append('%02X' % byte)
-                    self._log(' '.join(message_string))
-        else:
-            message_string = ['status %02X: ' % status]
-            for byte in message:
-                message_string.append('%02X' % byte)
-            self._log(' '.join(message_string))
+    #         if cc_number in cc_selector:
+    #             eval(cc_selector[cc_number] % cc_value)
+    #         elif cc_number == 0x6B:
+    #             # this controller change message is sent on entering
+    #             # and leaving "Automap" mode and can be probably
+    #             # ignored
+    #             pass
+    #         else:
+    #             internal_id = 'cc%d' % cc_number
+    #             status = cc_value & 0x01
+    #             key_processed = self.interconnector.keypress(internal_id, status)
+
+    #             if not key_processed:
+    #                 message_string = ['status %02X: ' % status]
+    #                 for byte in message:
+    #                     message_string.append('%02X' % byte)
+    #                 self._log(' '.join(message_string))
+    #     else:
+    #         message_string = ['status %02X: ' % status]
+    #         for byte in message:
+    #             message_string.append('%02X' % byte)
+    #         self._log(' '.join(message_string))
 
     def send_midi_control_change(self, channel=None, cc_number=None, cc_value=None):
         if not self._is_connected:

@@ -162,12 +162,8 @@ class McuInterconnector:
         self._callback_log = callback_log
         self.parent = parent
 
-        eval_controller_init = '%(cc)s.%(cc)s("%(midi_in)s", "%(midi_out)s", callback_log)' % {
-            'cc': hardware_controller_class,
-            'midi_in': controller_midi_input,
-            'midi_out': controller_midi_output
-        }
-        self._hardware_controller = eval(eval_controller_init)
+        self._hardware_controller = hardware_controller_class(midi_in, midi_out, callback_log)
+
 
         # get "Python MCU" version number
         python_mcu_version = ApplicationConfiguration().get_version(False)

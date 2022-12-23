@@ -23,8 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Thank you for using free software!
 
 """
-
-__all__ = [
-    'NovationZeROSLMkII',
-    'NovationZeROSLMkIIMIDI'
-]
+from .NektarPanoramaTSeries import NektarPanoramaTSeries
+from .NovationZeROSLMkII import NovationZeROSLMkII
+from .NovationZeROSLMkIIMIDI import NovationZeROSLMkIIMIDI

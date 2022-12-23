@@ -1,9 +1,2 @@
-*~
-.*~
-*.pyc
-Desktop.ini
-Thumbs.db
-auto/
-/release/
-/venv/
-/docs/_build/
+.DS_Store
+__pycache__

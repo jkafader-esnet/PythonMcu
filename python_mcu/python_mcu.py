@@ -36,14 +36,21 @@ from PySide2.QtWidgets import QFrame, QApplication, QPlainTextEdit, QStyle, QHBo
     QLabel, QComboBox, QPushButton
 
 # noinspection PyUnresolvedReferences
-from PythonMcu.Hardware import *
+from PythonMcu import Hardware
 from PythonMcu.MackieControl.MackieHostControl import MackieHostControl
 from PythonMcu.McuInterconnector.McuInterconnector import McuInterconnector
 from PythonMcu.Midi.MidiConnection import MidiConnection
 from PythonMcu.Tools.AboutDialog import AboutDialog
 from PythonMcu.Tools.ApplicationConfiguration import ApplicationConfiguration
 
+import inspect
+
 configuration = ApplicationConfiguration()
+
+
+HARDWARE_CONTROLLERS = {
+    klass[1].FORMATTED_NAME: klass[1] for klass in inspect.getmembers(Hardware, inspect.isclass)
+}
 
 
 # noinspection PyArgumentList
@@ -109,12 +116,6 @@ class PythonMcuApp(QFrame):
             'Mackie Control', 'Mackie Control XT'
         ]
 
-        # TODO: derive from classes imported via PythonMcu.Hardware *
-        hardware_controllers = [
-            'Novation ZeRO SL MkII',
-            'Novation ZeRO SL MkII (MIDI)'
-        ]
-
         self.setWindowTitle(configuration.get_version(True))
 
         # create layouts and add widgets
@@ -165,7 +166,7 @@ class PythonMcuApp(QFrame):
 
         self._combo_hardware_controller = self._create_combo_box(
             self.grid_layout_controller, self._hardware_controller,
-            'Controller:', hardware_controllers
+            'Controller:', [i for i in HARDWARE_CONTROLLERS.keys()]
         )
 
         self._combo_controller_midi_input = self._create_combo_box(
@@ -211,7 +212,7 @@ class PythonMcuApp(QFrame):
     def _read_configuration(self):
         # initialise defaults for MCU and hardware controller
         mcu_emulated_model_default = MackieHostControl.get_preferred_mcu_model()
-        hardware_controller_default = 'Novation ZeRO SL MkII'
+        hardware_controller_default = [k for k in HARDWARE_CONTROLLERS.keys()][0]
         midi_latency_default = '1'
 
         # retrieve user configuration for MCU and hardware controller
@@ -289,24 +290,21 @@ class PythonMcuApp(QFrame):
         self.frame_controller.setEnabled(state)
 
     def _initialise_hardware_controller(self):
+        # XXXXXX: OMG, no.
+
         # the hardware controller's class name is simply the
         # controller's manufacturer and name with all spaces
         # and all brackets removed
-        self._hardware_controller_class = self._hardware_controller.replace(' ', '')
-        self._hardware_controller_class = self._hardware_controller_class.replace('(', '').replace(')', '')
-        self._hardware_controller_class = self._hardware_controller_class.replace('[', '').replace(']', '')
-        self._hardware_controller_class = self._hardware_controller_class.replace('{', '').replace('}', '')
+        self._hardware_controller_class = HARDWARE_CONTROLLERS[self._hardware_controller]
 
         # get hardware controller's preferred MIDI ports
-        eval_controller_midi_input = '{0!s}.{0!s}.get_preferred_midi_input()'.format(self._hardware_controller_class)
-        eval_controller_midi_output = '{0!s}.{0!s}.get_preferred_midi_output()'.format(self._hardware_controller_class)
+        controller_midi_input_default = self._hardware_controller_class.get_preferred_midi_input()
+        controller_midi_output_default = self._hardware_controller_class.get_preferred_midi_output()
 
-        controller_midi_input_default = eval(eval_controller_midi_input)
-        controller_midi_output_default = eval(eval_controller_midi_output)
 
         # show controller's usage hint
-        usage_hint = '{0!s}.{0!s}.get_usage_hint()'.format(self._hardware_controller_class)
-        self._edit_usage_hint.setPlainText(eval(usage_hint))
+        usage_hint = self._hardware_controller_class.get_usage_hint()
+        self._edit_usage_hint.setPlainText(usage_hint)
 
         return controller_midi_input_default, controller_midi_output_default
 

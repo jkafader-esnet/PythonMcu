@@ -35,6 +35,7 @@ from PythonMcu.Midi.MidiConnection import MidiConnection
 
 
 class NovationZeROSLMkIIMIDI(NovationZeROSLMkII):
+    FORMATTED_NAME = "Novation ZeRO SL MkII (MIDI)"
     def __init__(self, midi_input, midi_output, callback_log):
         NovationZeROSLMkII.__init__(self, midi_input, midi_output, callback_log)
 

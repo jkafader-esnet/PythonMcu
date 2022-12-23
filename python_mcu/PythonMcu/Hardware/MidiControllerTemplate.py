@@ -135,6 +135,7 @@ class MidiControllerTemplate:
         self.midi.process_input_buffer()
 
     def receive_midi(self, status, message):
+        print(status, message)
         message_string = ['status %02X: ' % status]
         for byte in message:
             message_string.append('%02X' % byte)
