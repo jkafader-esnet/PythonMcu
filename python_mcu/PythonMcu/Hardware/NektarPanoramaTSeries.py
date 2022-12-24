@@ -301,7 +301,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             #                                        len data           term
             0x03, # Top Menu Value. Has 1 part:   01  05 2B 31 32 2E 30 F7
             0x04, # Soft button names. Has 4 parts: 1: 04 00 2: 04 00 00 00 3: 01 00 4: 01 (then strings)
-            0x05, # Unknown. Has 1 part: 01 00 F7
+            0x05, # Second Block (black area) Values. Has 4 parts: 1: 05 01  01 (string) 02 00 00 (empty string) 03 (string)
             0x06, # Track names 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
             0x06, # Track names 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
             0x07, # pan values 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
