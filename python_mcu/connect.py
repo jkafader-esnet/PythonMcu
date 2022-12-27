@@ -25,7 +25,3 @@ except Exception as exc:
     print('{}: {}'.format(type(exc).__name__, exc))
 finally:
     hardware.disconnect()
-#time.sleep(30)
-#logger.warning(hardware)
-#logger.warning("Disconnecting...")
-#hardware.disconnect()
