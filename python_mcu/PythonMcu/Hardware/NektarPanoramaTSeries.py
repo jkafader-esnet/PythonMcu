@@ -229,7 +229,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if 'PANORAMA T6 Internal' in port:
+            if midi_output in port:
                 self.port_num = i
                 break
         print("the port number is %s" % self.port_num)
@@ -253,7 +253,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def send_midi(self, message):
         self.callback_log("SEND: "+" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]), "")
         self.midiout.send_message(message)
-        time.sleep(0.01)
+        time.sleep(0.001)
         
     def shift_mode(self, bool):
         if bool:
@@ -355,7 +355,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def mixer_mode(self):
         self.mode = "mixer"
         data = [0x06, 0x02, 0x7F, 0x00, 0x00]
-        return self.send_midi(self.standard_syx_header + data + [0xF7])
+        self.send_midi(self.standard_syx_header + data + [0xF7])
+        # wait a while. Don't overload buffer.
+        #time.sleep(0.1)
+
         #return self.midi.send_sysex(self.standard_syx_header, data)
 
     def pan_mode(self):
@@ -369,6 +372,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #F0 00 01 77 7F 01 09 06 00 00 01 36 39 F7
         data = [0x09, 0x06, 0x00, 0x00, 0x01, 0x36, 0x39]
         self.send_midi(self.standard_syx_header + data + [0xF7])
+        #time.sleep(0.1)
         #self.midi.send_sysex(self.standard_syx_header + header, data)
         # B0 63 7F
         # B0 63 7F
