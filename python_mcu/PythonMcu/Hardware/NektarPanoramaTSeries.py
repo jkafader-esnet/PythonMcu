@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Thank you for using free software!
 
 """
-
+import time
 import os
 import sys
 
@@ -98,6 +98,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def __init__(self, midi_input, midi_output, callback_log, patch, controller):
         super().__init__(midi_input, midi_output, callback_log)
+        self.callback_log = callback_log
         self.controller = controller
         self.active_track = 1
         self.mode = "mixer"
@@ -112,13 +113,13 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             7: {"name": "Fader 8", "set": self.set_track_volume(7) },
 
             48: {"name": "Rotary 1", "set": self.set_rotary_value(0) },
-            49: {"name": "Rotary 1", "set": self.set_rotary_value(1) },
-            50: {"name": "Rotary 1", "set": self.set_rotary_value(2) },
-            51: {"name": "Rotary 1", "set": self.set_rotary_value(3) },
-            52: {"name": "Rotary 1", "set": self.set_rotary_value(4) },
-            53: {"name": "Rotary 1", "set": self.set_rotary_value(5) },
-            54: {"name": "Rotary 1", "set": self.set_rotary_value(6) },
-            55: {"name": "Rotary 1", "set": self.set_rotary_value(7) },
+            49: {"name": "Rotary 2", "set": self.set_rotary_value(1) },
+            50: {"name": "Rotary 3", "set": self.set_rotary_value(2) },
+            51: {"name": "Rotary 4", "set": self.set_rotary_value(3) },
+            52: {"name": "Rotary 5", "set": self.set_rotary_value(4) },
+            53: {"name": "Rotary 6", "set": self.set_rotary_value(5) },
+            54: {"name": "Rotary 7", "set": self.set_rotary_value(6) },
+            55: {"name": "Rotary 8", "set": self.set_rotary_value(7) },
 
             16: { "name": "Track 1 Button", "set": self.toggle_function(1) },
             17: { "name": "Track 2 Button", "set": self.toggle_function(2) },
@@ -184,10 +185,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 "B7": {"name": "Main Output",      "group": "BUTTONS", "set": self.vbutton_setter(7), "value": 127 },
             },
             "ob-xd": {
-                "OSC/FLT": {}
-                "MOD": {}
-                "FLT": {}
-            }
+                "OSC/FLT": {},
+                "MOD": {},
+                "FLT": {},
+            },
             "hammond": {
                 0: {"name": "Draw [16']",     "set": self.vtrack_setter(0, invert=True), "value": 91 },
                 1: {"name": "Draw [5  1/3']", "set": self.vtrack_setter(1, invert=True), "value": 91 },
@@ -199,9 +200,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 7: {"name": "Draw [1  1/3']", "set": self.vtrack_setter(7, invert=True), "value": 91 },
             }
         } 
-        self.faders = { name: fader for name, fader in patches[patch] if name.startswith("F") }
-        self.rotaries = { name: rotary for name, rotary in patches[patch] if name.startswith("P") }
-        self.buttons = { name: button for name, button in patches[patch] if name.startswith("B") }
+        self.faders = { name: fader for name, fader in patches[patch].items() if name.startswith("F") }
+        self.rotaries = { name: rotary for name, rotary in patches[patch].items() if name.startswith("P") }
+        self.buttons = { name: button for name, button in patches[patch].items() if name.startswith("B") }
 
         self.display_lcd_available = True
         self.automated_faders_available = False
@@ -224,13 +225,14 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
-        self.logger.warning("Available ports: %s", self.port_list)
+        callback_log("Available ports: %s" % self.port_list, '')
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if midi_input in port:
+            if 'PANORAMA T6 Internal' in port:
                 self.port_num = i
                 break
+        print("the port number is %s" % self.port_num)
         if self.port_num is None:
             sys.exit("couldn't find appropriate port")
         self.midiout.open_port(self.port_num)
@@ -248,6 +250,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def panic(self):
         pass
 
+    def send_midi(self, message):
+        self.callback_log("SEND: "+" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]), "")
+        self.midiout.send_message(message)
+        time.sleep(0.01)
+        
     def shift_mode(self, bool):
         if bool:
             self.pan_mode()
@@ -285,24 +292,56 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_rotary_value(self, track_number):
         def set(value):
-            self.rotaries["P"+track_number]["set"](value)
+            self.rotaries["P%s" % track_number]["set"](value)
         return set
 
     def set_track_volume(self, track_number):
         def set(value):
-            self.faders["F"+track_number]["set"](value)
+            self.faders["F%s" % track_number]["set"](value)
         return set
 
     def set_vtrack_value(self, fader_number, value):
-        self.midiout.send_message([0xB0, fader_number, value])
+        self.send_midi([0xB0, fader_number, value])
         #self.midi.send(0xB0, fader_number, value)
 
     def vtrack_setter(self, track_number, invert=False):
         def set(value, invert=invert):
             if invert:
                 value = 127 - value
-            self.faders["F"+track_number]["value"] = value
+            self.faders["F%s" % track_number]["value"] = value
             self.set_vtrack_value(track_number, value)
+        return set
+
+    def set_vpot_value(self, track_number, value):
+        offset = 48 # first pot control number
+        self.send_midi([0xB0, offset + track_number, value])
+    
+    def vpot_setter(self, track_number, invert=False):
+        def set(value, invert=invert):
+            if value == 127:
+                if invert:
+                    value = -1
+                else:
+                    value = 1
+            if value == 0:
+                if invert:
+                    value = 1
+                else:
+                    value = -1
+            self.rotaries["F%s" % track_number]["value"] += value
+            self.set_vpot_value(track_number, value)
+        return set
+
+    def set_vbutton_value(self, track_number, value):
+        offset = 48 # first pot control number
+        self.send_midi([0xB0, offset + track_number, value])
+    
+    def vbutton_setter(self, track_number, invert=False):
+        def set(value, invert=invert):
+            if invert:
+                value = 0 if value == 127 else 127
+            self.buttons["B%s" % track_number]["value"] = value
+            self.set_vbutton_value(track_number, value)
         return set
 
     @staticmethod
@@ -316,27 +355,28 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def mixer_mode(self):
         self.mode = "mixer"
         data = [0x06, 0x02, 0x7F, 0x00, 0x00]
-        return self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        return self.send_midi(self.standard_syx_header + data + [0xF7])
         #return self.midi.send_sysex(self.standard_syx_header, data)
 
     def pan_mode(self):
         self.mode = "pan"
         data = [0x06, 0x10, 0x7F, 0x00, 0x00]
-        return self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        return self.send_midi(self.standard_syx_header + data + [0xF7])
         #return self.midi.send_sysex(self.standard_syx_header, data)
 
     def initialize_controls(self):
         #F0 00 01 77 7F 01 09 06 00 00 01 36 39 F7
-        header = [0x09]
-        data = [0x06, 0x00, 0x00, 0x01, 0x36, 0x39]
-        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #F0 00 01 77 7F 01 09 06 00 00 01 36 39 F7
+        data = [0x09, 0x06, 0x00, 0x00, 0x01, 0x36, 0x39]
+        self.send_midi(self.standard_syx_header + data + [0xF7])
         #self.midi.send_sysex(self.standard_syx_header + header, data)
         # B0 63 7F
-        self.midiout.send_message([0xB0, 0x63, 0x7F])
+        # B0 63 7F
+        self.send_midi([0xB0, 0x63, 0x7F])
         # F0 00 01 77 7F 01                      F7 (header)
         # F0 00 01 77 7F 01 0D 04 00 00 01 00 6D F7
         data = [0x0D, 0x04, 0x00, 0x00, 0x01, 0x00, 0x6D]
-        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        self.send_midi(self.standard_syx_header + data + [0xF7])
         #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                F7 (header)
         # F0 00 01 77 7F 01 06 02 7F 00 00 F7
@@ -360,7 +400,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                      F7 (header)
         # F0 00 01 77 7F 01 0D 01 00 00 01 01 6F F7
         data = [0x0D, 0x01, 0x00, 0x00, 0x01, 0x01, 0x6F]
-        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        self.send_midi(self.standard_syx_header + data + [0xF7])
         #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                F7 (header)
         # F0 00 01 77 7F 01 06 02 7F 00 00 F7
@@ -376,7 +416,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                      F7 (header)
         # F0 00 01 77 7F 01 0F 06 01 01 01 00 67 F7
         data = [0x0F, 0x06, 0x01, 0x01, 0x01, 0x00, 0x67]
-        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        self.send_midi(self.standard_syx_header + data + [0xF7])
         #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                                  F7 (header)
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
@@ -479,7 +519,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         header = areas[area]['header']
         offset = areas[area]['offset']
         message = header + formatter(data, offset=offset)
-        return self.midiout.send_message(self.standard_syx_header + [c for c in message] + [0xF7])
+        return self.send_midi(self.standard_syx_header + [c for c in message] + [0xF7])
 
 
     # def sysex_layers(self):
@@ -500,7 +540,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     #     for layer in layers:
     #         message = layer
-    #         self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+    #         self.send_midi(self.standard_syx_header + data + [0xF7])
     #         self.midi.send_sysex(self.standard_syx_header + more_syx_header, )
 
     def set_button_labels(self, labels):
@@ -538,7 +578,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if(offset <= len(labels)):
                 message.append(0x00)
 
-        self.midiout.send_message(self.standard_syx_header + message + [0xF7])
+        self.send_midi(self.standard_syx_header + message + [0xF7])
         #self.midi.send_sysex(self.standard_syx_header, message)
 
     def set_track_names(self, track_names):
@@ -566,11 +606,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_active_track(self, track):
         self.active_track = track
-        self.midiout.send_message([0xB0, 0x19, track])
+        self.send_midi([0xB0, 0x19, track])
 
     # --- initialisation ---
     def connect(self):
-        MidiControllerTemplate.connect(self)
+        #MidiControllerTemplate.connect(self)
         self._is_connected = True
 
         #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialising...')
@@ -597,16 +637,22 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self._leave_mcu_mode()
 
         self._is_connected = False
-        MidiControllerTemplate.disconnect(self)
+        self.midiin.close_port()
+        self.midiout.close_port()
+        del self.midiin
+        del self.midiout
+        #MidiControllerTemplate.disconnect(self)
 
     def go_online(self):
-        MidiControllerTemplate.go_online(self)
+        pass
+        #MidiControllerTemplate.go_online(self)
 
         #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
         #self.set_lcd_directly(1, 'Mackie Host Control:    online.')
 
     def go_offline(self):
-        MidiControllerTemplate.go_offline(self)
+        pass
+        #MidiControllerTemplate.go_offline(self)
 
         #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
         #self.set_lcd_directly(1, 'Mackie Host Control:    offline.')
@@ -617,7 +663,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         header = [0xF0, 0x7E, 0x7F]
         data = [0x06, 0x01]
 
-        self.midiout.send_message(header + data + [0xF7])
+        self.send_midi(header + data + [0xF7])
         #self.midi.send_sysex(header, data)
 
     def send_disconnect(self):
@@ -625,7 +671,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01, 0x09] # XXX: probably
         data = [0x00, 0x00, 0x00, 0x01, 0x00, 0x75] # unknown
         
-        self.midiout.send_message(header + data + [0xF7])
+        self.send_midi(header + data + [0xF7])
         #self.midi.send_sysex(header, data)
 
     def _enter_mcu_mode(self):
@@ -662,7 +708,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         pass
 
     # --- MIDI processing ---
-    def receive_midi(self, status, message):
+    def receive_midi(self, data, something):
+        message, timestamp = data
+        self.callback_log("RECV: %s" % (" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]),), "")
         if message[0] == 0xF0 and message[-1] == 0xF7:
             self.process_sysex(message=message)
         if message[0] == 0xB0:
@@ -758,14 +806,14 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     #             message_string.append('%02X' % byte)
     #         self._log(' '.join(message_string))
 
-    def send_midi_control_change(self, channel=None, cc_number=None, cc_value=None):
-        if not self._is_connected:
-            return
+    #def send_midi_control_change(self, channel=None, cc_number=None, cc_value=None):
+    #    if not self._is_connected:
+    #        return
 
-        if channel:
-            raise ValueError("The channel is fixed for this device!")
+    #    if channel:
+    #        raise ValueError("The channel is fixed for this device!")
 
-        MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, cc_number, cc_value)
+    #    MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, cc_number, cc_value)
 
     @staticmethod
     def get_preferred_midi_input():
@@ -797,8 +845,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self.interconnector.withdraw_control(midi_switch_cc)
 
-    def set_display_7seg(self, position, character_code):
-        MidiControllerTemplate.set_display_7seg(self, position, character_code)
+    #def set_display_7seg(self, position, character_code):
+    #    MidiControllerTemplate.set_display_7seg(self, position, character_code)
 
     # --- handling of Mackie Control commands ---
     def set_lcd_directly(self, line, lcd_string):
@@ -864,23 +912,23 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self.send_midi_sysex(sysex_data)
 
-    def set_led(self, internal_id, led_status):
-        if not self._is_connected:
-            return
+    #def set_led(self, internal_id, led_status):
+    #    if not self._is_connected:
+    #        return
 
-        controller_type = internal_id[:2]
-        controller_id = int(internal_id[2:])
+    #    controller_type = internal_id[:2]
+    #    controller_id = int(internal_id[2:])
 
-        if controller_type == 'cc':
-            MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, controller_id, led_status)
-        else:
-            self._log('controller type "%s" unknown.' % controller_type)
+    #    if controller_type == 'cc':
+    #        MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, controller_id, led_status)
+    #    else:
+    #        self._log('controller type "%s" unknown.' % controller_type)
 
-    def _set_led(self, led_id, led_status):
-        if not self._is_connected:
-            return
+    #def _set_led(self, led_id, led_status):
+    #    if not self._is_connected:
+    #        return
 
-        MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, led_id, led_status)
+    #    MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, led_id, led_status)
 
     def set_vpot_led_ring(self, vpot_id, vpot_center_led, vpot_mode, vpot_position):
         mode = None

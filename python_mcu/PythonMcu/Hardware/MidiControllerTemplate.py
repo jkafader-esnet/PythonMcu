@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # allow "PythonMcu" package imports when executing this module
     sys.path.append('../../../')
 
-from PythonMcu.Midi.MidiConnection import MidiConnection
+#from PythonMcu.Midi.MidiConnection import MidiConnection
 
 
 class MidiControllerTemplate:
@@ -66,7 +66,8 @@ class MidiControllerTemplate:
         self._log('Initialising MIDI ports...', True)
         self._midi_input_name = midi_input_name
         self._midi_output_name = midi_output_name
-        self.midi = MidiConnection(self.callback_log, self.receive_midi)
+        self.midi = {}
+        #self.midi = MidiConnection(self.callback_log, self.receive_midi)
 
         # Initialized by set_interconnector()
         self.interconnector = None

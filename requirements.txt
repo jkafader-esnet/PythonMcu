@@ -1,2 +1,1 @@
-pygame
-pyside2
+python-rtmidi

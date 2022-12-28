@@ -67,9 +67,7 @@ class APIClient(object):
                 if hasattr(self, "receive_%s" % command):
                     getattr(self, "receive_%s" % command)(message)
                 else:
-                    self.logger("malformed sysex response %s" % message)
-        else:
-            self.logger("non-sysex. discarding")
+                    self.logger.warning("malformed sysex response %s" % message)
 
     def send(self, message):
         message = self.format_query(message)
@@ -155,12 +153,13 @@ class APIClient(object):
 
 class ZynMCUController(object):
     def __init__(self):
-        self.client = APIClient()
-        patch = 'hammond'
-        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
         self.logger = logging.getLogger("ZynMCUController")
         logging.basicConfig(level=logging.DEBUG)
 
+        self.client = APIClient()
+        patch = 'moog'
+        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
+        
         self.addr=liblo.Address('osc.udp://localhost:1370')
         self.curr_instrument = 0
 
@@ -184,26 +183,28 @@ class ZynMCUController(object):
         self.logger.warning(message)
         
     def poll_until_ready(self):
-        while not client.populated['HANDSHAKE'] and \
-              not client.populated['QUERY_NUM_CHAINS'] and \
-              not client.populated['QUERY_CHAIN_CHANNELS'] and \
-              not client.populated['QUERY_CHAIN_ENGINES']:
+        while not self.client.populated['HANDSHAKE'] and \
+              not self.client.populated['QUERY_NUM_CHAINS'] and \
+              not self.client.populated['QUERY_CHAIN_CHANNELS'] and \
+              not self.client.populated['QUERY_CHAIN_ENGINES']:
             self.client.send_HANDSHAKE()
             self.client.send_QUERY_NUM_CHAINS()
             self.client.send_QUERY_CHAIN_CHANNELS()
             self.client.send_QUERY_CHAIN_ENGINES()
             time.sleep(0.1)
-        client.close()
+        self.client.close()
         # now we're ready, do ready.
         self.ready()
 
     def ready(self):
-        hardware.connect()
+        print('looks like we are ready...')
+        self.hardware.connect()
         
     def disconnect(self):
-        hardware.disconnect()
+        self.hardware.disconnect()
         
-    
+controller = ZynMCUController()    
+controller.poll_until_ready()
 
 try:
     while True:
@@ -211,6 +212,7 @@ try:
 except KeyboardInterrupt:
     print("")
 finally:
+    controller.disconnect()
     print("Exiting...")
     sys.exit()
 

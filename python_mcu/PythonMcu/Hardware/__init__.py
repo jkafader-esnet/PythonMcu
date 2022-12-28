@@ -24,5 +24,5 @@ Thank you for using free software!
 
 """
 from .NektarPanoramaTSeries import NektarPanoramaTSeries
-from .NovationZeROSLMkII import NovationZeROSLMkII
-from .NovationZeROSLMkIIMIDI import NovationZeROSLMkIIMIDI
+#from .NovationZeROSLMkII import NovationZeROSLMkII
+#from .NovationZeROSLMkIIMIDI import NovationZeROSLMkIIMIDI
