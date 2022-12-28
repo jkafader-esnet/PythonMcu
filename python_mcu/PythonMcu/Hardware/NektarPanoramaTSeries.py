@@ -145,38 +145,45 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             101: {"name": "Internal",   "set": self.display_settings_page("Routing/Effects")},
         }
         patches ={
-            "synth": {
-                "OSC": {
-                    0: {"name": "Osc1 Octave", "set": self.vtrack_setter(0), "value": 91 },
-                    1: {"name": "Osc1 Shape",  "set": self.vtrack_setter(1), "value": 91 },
-                    2: {"name": "Osc2 Octave", "set": self.vtrack_setter(2), "value": 91 },
-                    3: {"name": "Osc2 Fine",   "set": self.vtrack_setter(3), "value": 91 },
-                    4: {"name": "Osc2 Shape",  "set": self.vtrack_setter(4), "value": 91 },
-                    5: {"name": "Osc3 Octave", "set": self.vtrack_setter(5), "value": 91 },
-                    6: {"name": "Osc3 Fine",   "set": self.vtrack_setter(6), "value": 91 },
-                    7: {"name": "Osc3 Level",  "set": self.vtrack_setter(7), "value": 91 },
-                },
-                "ENV": {
-                    0: {"name": "VCA  Attack",  "set": self.vtrack_setter(0), "value": 91 },
-                    1: {"name": "VCA  Decay",   "set": self.vtrack_setter(1), "value": 91 },
-                    2: {"name": "VCA  Sustain", "set": self.vtrack_setter(2), "value": 91 },
-                    3: {"name": "VCA  Release", "set": self.vtrack_setter(3), "value": 91 },
-                    4: {"name": "VCF  Attack",  "set": self.vtrack_setter(4), "value": 91 },
-                    5: {"name": "VCF  Decay",   "set": self.vtrack_setter(5), "value": 91 },
-                    6: {"name": "VCF  Sustain", "set": self.vtrack_setter(6), "value": 91 },
-                    7: {"name": "VCF  Release", "set": self.vtrack_setter(7), "value": 91 },
-                },
-                "FLT/MIX": {
-                    0: {"name": "Cutoff",       "set": self.vtrack_setter(0), "value": 64 },
-                    1: {"name": "Resonance",    "set": self.vtrack_setter(1), "value": 64 },
-                    2: {"name": "Env Amount",   "set": self.vtrack_setter(2), "value": 64 },
-                    3: {"name": "Glide",        "set": self.vtrack_setter(3), "value": 64 },
-                    4: {"name": "Noise Level",  "set": self.vtrack_setter(4), "value": 64 },
-                    5: {"name": "Osc1 Level",   "set": self.vtrack_setter(5), "value": 64 },
-                    6: {"name": "Osc2 Level",   "set": self.vtrack_setter(6), "value": 64 },
-                    7: {"name": "Osc3 Lvl/Mod Amt", "set": self.vtrack_setter(7), "value": 64 },
-                }
+            "moog": {
+                "F0": {"name": "Osc1 Octave",      "group": "OSC",     "set": self.vtrack_setter(0),  "value": 91 },
+                "F1": {"name": "Osc1 Shape",       "group": "OSC",     "set": self.vtrack_setter(1),  "value": 91 },
+                "F2": {"name": "Osc2 Octave",      "group": "OSC",     "set": self.vtrack_setter(2),  "value": 91 },
+                "F3": {"name": "Osc2 Fine",        "group": "OSC",     "set": self.vtrack_setter(3),  "value": 91 },
+                "F4": {"name": "Osc2 Shape",       "group": "OSC",     "set": self.vtrack_setter(4),  "value": 91 },
+                "F5": {"name": "Osc3 Octave",      "group": "OSC",     "set": self.vtrack_setter(5),  "value": 91 },
+                "F6": {"name": "Osc3 Fine",        "group": "OSC",     "set": self.vtrack_setter(6),  "value": 91 },
+                "F7": {"name": "Osc3 Shape",       "group": "OSC",     "set": self.vtrack_setter(7),  "value": 91 },
+                "F8": {"name": "VCA  Attack",      "group": "ENV",     "set": self.vtrack_setter(8),  "value": 91 },
+                "F9": {"name": "VCA  Decay",       "group": "ENV",     "set": self.vtrack_setter(9),  "value": 91 },
+                "F10": {"name": "VCA  Sustain",    "group": "ENV",     "set": self.vtrack_setter(10), "value": 91 },
+                "F11": {"name": "VCA  Release",    "group": "ENV",     "set": self.vtrack_setter(11), "value": 91 },
+                "F12": {"name": "VCF  Attack",     "group": "ENV",     "set": self.vtrack_setter(12), "value": 91 },
+                "F13": {"name": "VCF  Decay",      "group": "ENV",     "set": self.vtrack_setter(13), "value": 91 },
+                "F14": {"name": "VCF  Sustain",    "group": "ENV",     "set": self.vtrack_setter(14), "value": 91 },
+                "F15": {"name": "VCF  Release",    "group": "ENV",     "set": self.vtrack_setter(15), "value": 91 },
+                "P0": {"name": "Cutoff",           "group": "FLT/MIX", "set": self.vpot_setter(0),    "value": 64 },
+                "P1": {"name": "Resonance",        "group": "FLT/MIX", "set": self.vpot_setter(1),    "value": 64 },
+                "P2": {"name": "Env Amount",       "group": "FLT/MIX", "set": self.vpot_setter(2),    "value": 64 },
+                "P3": {"name": "Portamento",       "group": "FLT/MIX", "set": self.vpot_setter(3),    "value": 64 },
+                "P4": {"name": "Noise Level",      "group": "FLT/MIX", "set": self.vpot_setter(4),    "value": 64 },
+                "P5": {"name": "Osc1 Level",       "group": "FLT/MIX", "set": self.vpot_setter(5),    "value": 64 },
+                "P6": {"name": "Osc2 Level",       "group": "FLT/MIX", "set": self.vpot_setter(6),    "value": 64 },
+                "P7": {"name": "Osc3 Lvl/Mod Amt", "group": "FLT/MIX", "set": self.vpot_setter(7),    "value": 64 },
+                "B0": {"name": "Oscillator Mod",   "group": "BUTTONS", "set": self.vbutton_setter(0), "value": 0 },
+                "B1": {"name": "Filter Mod",       "group": "BUTTONS", "set": self.vbutton_setter(1), "value": 0 },
+                "B2": {"name": "Keyboard->Osc1",   "group": "BUTTONS", "set": self.vbutton_setter(2), "value": 127 },
+                "B3": {"name": "Keyboard->Osc2",   "group": "BUTTONS", "set": self.vbutton_setter(3), "value": 127 },
+                "B4": {"name": "Keyboard->Osc3",   "group": "BUTTONS", "set": self.vbutton_setter(4), "value": 0 },
+                "B5": {"name": "Noise Color",      "group": "BUTTONS", "set": self.vbutton_setter(5), "value": 0 },
+                "B6": {"name": "A-440 Sync",       "group": "BUTTONS", "set": self.vbutton_setter(6), "value": 127 },
+                "B7": {"name": "Main Output",      "group": "BUTTONS", "set": self.vbutton_setter(7), "value": 127 },
             },
+            "ob-xd": {
+                "OSC/FLT": {}
+                "MOD": {}
+                "FLT": {}
+            }
             "hammond": {
                 0: {"name": "Draw [16']",     "set": self.vtrack_setter(0, invert=True), "value": 91 },
                 1: {"name": "Draw [5  1/3']", "set": self.vtrack_setter(1, invert=True), "value": 91 },
@@ -188,8 +195,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 7: {"name": "Draw [1  1/3']", "set": self.vtrack_setter(7, invert=True), "value": 91 },
             }
         } 
-        self.tracks = patches[patch]["SOUND1"]
-        self.rotaries = patches[patch]["FX"]
+        self.faders = { name: fader for name, fader in patches[patch] if name.startswith("F") }
+        self.rotaries = { name: rotary for name, rotary in patches[patch] if name.startswith("P") }
+        self.buttons = { name: button for name, button in patches[patch] if name.startswith("B") }
 
         self.display_lcd_available = True
         self.automated_faders_available = False
@@ -232,9 +240,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.mixer_mode()
             self.set_display_area("focus_name", ["You Released"])
             self.set_display_area("focus_value", ["Shift!"])
-            self.set_track_names([track['name'] for num, track in self.tracks.items()])
+            self.set_track_names([track['name'] for num, track in self.faders.items()])
             self.set_button_labels(['SOUND1', 'SOUND2', '', 'FX', ''])
-            for key, track in self.tracks.items():
+            for key, track in self.faders.items():
                 track['set'](track['value'], invert=False) # never invert the last value...
 
 
@@ -254,11 +262,12 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_rotary_value(self, track_number):
         def set(value):
-            self.rotaries[]
+            self.rotaries["P"+track_number]["set"](value)
+        return set
 
     def set_track_volume(self, track_number):
         def set(value):
-            self.tracks[track_number]["set"](value)
+            self.faders["F"+track_number]["set"](value)
         return set
 
     def set_vtrack_value(self, fader_number, value):
@@ -268,7 +277,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         def set(value, invert=invert):
             if invert:
                 value = 127 - value
-            self.tracks[track_number]["value"] = value
+            self.faders["F"+track_number]["value"] = value
             self.set_vtrack_value(track_number, value)
         return set
 
@@ -343,9 +352,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
         self.set_display_area('unknown', ['', '', ''])
 
-        self.set_track_names([track['name'] for num, track in self.tracks.items()])
+        self.set_track_names([track['name'] for num, track in self.faders.items()])
         self.set_button_labels(['SOUND1', 'SOUND2', '', 'FX', ''])
-        for key, track in self.tracks.items():
+        for key, track in self.faders.items():
             track['set'](track['value'])
 
         self.set_active_track(1)
