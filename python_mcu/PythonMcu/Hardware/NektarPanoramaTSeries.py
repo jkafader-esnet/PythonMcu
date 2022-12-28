@@ -32,7 +32,10 @@ if __name__ == "__main__":
     sys.path.append('../../../')
 
 from PythonMcu.Hardware.MidiControllerTemplate import MidiControllerTemplate
-from PythonMcu.Midi.MidiConnection import MidiConnection
+#from PythonMcu.Midi.MidiConnection import MidiConnection
+import rtmidi
+from rtmidi.midiutil import open_midiinput
+
 
 class NektarPanoramaTSeries(MidiControllerTemplate):
     FORMATTED_NAME = "Nektar Panorama T4/T6"
@@ -93,8 +96,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     _MODE_OTHER_GLOBAL_VIEW = 4
     _MODE_OTHER_UTILITY = 5
 
-    def __init__(self, midi_input, midi_output, callback_log, patch):
+    def __init__(self, midi_input, midi_output, callback_log, patch, controller):
         super().__init__(midi_input, midi_output, callback_log)
+        self.controller = controller
         self.active_track = 1
         self.mode = "mixer"
         self.controls = {
@@ -208,8 +212,27 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self._mode_automap = False
 
         self._is_connected = False
-        self.standard_syx_header = [0x00, 0x01, 0x77, 0x7F, 0x01]
-        self.midi = MidiConnection(callback_log, self.receive_midi)
+        self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
+
+        self.midiout = rtmidi.MidiOut()
+        self.port_list = self.midiout.get_ports()
+        self.logger.warning("Available ports: %s", self.port_list)
+        self.port_num = None
+        for i in range(len(self.port_list)):
+            port = self.port_list[i]
+            if midi_input in port:
+                self.port_num = i
+                break
+        if self.port_num is None:
+            sys.exit("couldn't find appropriate port")
+        self.midiout.open_port(self.port_num)
+
+        self.midiin, self.port_name = open_midiinput(self.port_num)
+        self.midiin.ignore_types(sysex=False)
+        self.midiin.set_callback(self.receive_midi)
+        
+        # original version. Commented with import above for reference.
+        #self.midi = MidiConnection(callback_log, self.receive_midi)
 
     def toggle_function(self, num):
         pass
@@ -262,7 +285,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         return set
 
     def set_vtrack_value(self, fader_number, value):
-        self.midi.send(0xB0, fader_number, value)
+        self.midiout.send_message([0xB0, fader_number, value])
+        #self.midi.send(0xB0, fader_number, value)
 
     def vtrack_setter(self, track_number, invert=False):
         def set(value, invert=invert):
@@ -283,24 +307,28 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def mixer_mode(self):
         self.mode = "mixer"
         data = [0x06, 0x02, 0x7F, 0x00, 0x00]
-        return self.midi.send_sysex(self.standard_syx_header, data)
+        return self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #return self.midi.send_sysex(self.standard_syx_header, data)
 
     def pan_mode(self):
         self.mode = "pan"
         data = [0x06, 0x10, 0x7F, 0x00, 0x00]
-        return self.midi.send_sysex(self.standard_syx_header, data)
+        return self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #return self.midi.send_sysex(self.standard_syx_header, data)
 
     def initialize_controls(self):
         #F0 00 01 77 7F 01 09 06 00 00 01 36 39 F7
         header = [0x09]
         data = [0x06, 0x00, 0x00, 0x01, 0x36, 0x39]
-        self.midi.send_sysex(self.standard_syx_header + header, data)
-        # B0 63 7F        
-        self.midi.send(0xB0, 0x63, 0x7F)
+        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #self.midi.send_sysex(self.standard_syx_header + header, data)
+        # B0 63 7F
+        self.midiout.send_message([0xB0, 0x63, 0x7F])
         # F0 00 01 77 7F 01                      F7 (header)
         # F0 00 01 77 7F 01 0D 04 00 00 01 00 6D F7
         data = [0x0D, 0x04, 0x00, 0x00, 0x01, 0x00, 0x6D]
-        self.midi.send_sysex(self.standard_syx_header, data)
+        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                F7 (header)
         # F0 00 01 77 7F 01 06 02 7F 00 00 F7
         self.mixer_mode()
@@ -323,7 +351,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                      F7 (header)
         # F0 00 01 77 7F 01 0D 01 00 00 01 01 6F F7
         data = [0x0D, 0x01, 0x00, 0x00, 0x01, 0x01, 0x6F]
-        self.midi.send_sysex(self.standard_syx_header, data)
+        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                F7 (header)
         # F0 00 01 77 7F 01 06 02 7F 00 00 F7
         self.mixer_mode()
@@ -338,7 +367,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                      F7 (header)
         # F0 00 01 77 7F 01 0F 06 01 01 01 00 67 F7
         data = [0x0F, 0x06, 0x01, 0x01, 0x01, 0x00, 0x67]
-        self.midi.send_sysex(self.standard_syx_header, data)
+        self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+        #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                                  F7 (header)
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
         self.set_display_area('unknown', ['', '', ''])
@@ -440,28 +470,29 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         header = areas[area]['header']
         offset = areas[area]['offset']
         message = header + formatter(data, offset=offset)
-        return self.midi.send_sysex(self.standard_syx_header, [c for c in message])
+        return self.midiout.send_message(self.standard_syx_header + [c for c in message] + [0xF7])
 
 
-    def sysex_layers(self):
-        more_syx_header = [0x06, 0x00]
-        layers = [
-            0x01, # unknown. Has 3 parts: 01 00 00, 02 00 00, 03 00 F7
-            #                                        len data                       term
-            0x02, # Top Menu Name. Has 1 part:    01  09 46 49 52 53 54 20 56 6F 6C F7
-            #                                        len data           term
-            0x03, # Top Menu Value. Has 1 part:   01  05 2B 31 32 2E 30 F7
-            0x04, # Soft button names. Has 4 parts: 1: 04 00 2: 04 00 00 00 3: 01 00 4: 01 (then strings)
-            0x05, # Second Block (black area) Values. Has 4 parts: 1: 05 01  01 (string) 02 00 00 (empty string) 03 (string)
-            0x06, # Track names 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
-            0x06, # Track names 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
-            0x07, # pan values 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
-            0x07, # pan values 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
-        ]
+    # def sysex_layers(self):
+    #     more_syx_header = [0x06, 0x00]
+    #     layers = [
+    #         0x01, # unknown. Has 3 parts: 01 00 00, 02 00 00, 03 00 F7
+    #         #                                        len data                       term
+    #         0x02, # Top Menu Name. Has 1 part:    01  09 46 49 52 53 54 20 56 6F 6C F7
+    #         #                                        len data           term
+    #         0x03, # Top Menu Value. Has 1 part:   01  05 2B 31 32 2E 30 F7
+    #         0x04, # Soft button names. Has 4 parts: 1: 04 00 2: 04 00 00 00 3: 01 00 4: 01 (then strings)
+    #         0x05, # Second Block (black area) Values. Has 4 parts: 1: 05 01  01 (string) 02 00 00 (empty string) 03 (string)
+    #         0x06, # Track names 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
+    #         0x06, # Track names 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
+    #         0x07, # pan values 1. Has 4 parts: 1: 01 (string) 02 (string) 03 (string) 04 (string)
+    #         0x07, # pan values 2. Has 4 parts: 1: 05 (string) 06 (string) 07 (string) 08 (string)
+    #     ]
 
-        for layer in layers:
-            message = layer
-            self.midi.send_sysex(self.standard_syx_header + more_syx_header, )
+    #     for layer in layers:
+    #         message = layer
+    #         self.midiout.send_message(self.standard_syx_header + data + [0xF7])
+    #         self.midi.send_sysex(self.standard_syx_header + more_syx_header, )
 
     def set_button_labels(self, labels):
         # full packet
@@ -498,28 +529,35 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if(offset <= len(labels)):
                 message.append(0x00)
 
-        self.midi.send_sysex(self.standard_syx_header, message)
+        self.midiout.send_message(self.standard_syx_header + message + [0xF7])
+        #self.midi.send_sysex(self.standard_syx_header, message)
 
     def set_track_names(self, track_names):
         self.set_display_area("track_names_1-4", track_names[0:4])
         self.set_display_area("track_names_5-8", track_names[4:8])
 
 
+    def register_change_instrument(callable):
+        self.instrument_change_callback = callable
+        
     def change_instrument(self, direction):
         def change(data):
             if(data)!=127:
                 return
-            self.active_track += direction
-            if self.active_track < 1:
-                self.active_track = 8
-            if self.active_track > 8:
-                self.active_track = 1
-            self.set_active_track(self.active_track)
+            self.controller.change_instrument(direction)
+            inst_name = self.controller.get_current_instrument_name()
+            self.set_display_area("focus_name", ["Current Instrument:"])
+            self.set_display_area("focus_value", [inst_name])
+            #if self.active_track < 1:
+            #    self.active_track = 8
+            #if self.active_track > 8:
+            #    self.active_track = 1
+            #self.set_active_track(self.active_track)
         return change
 
     def set_active_track(self, track):
         self.active_track = track
-        self.midi.send(0xB0, 0x19, track)
+        self.midiout.send_message([0xB0, 0x19, track])
 
     # --- initialisation ---
     def connect(self):
@@ -567,17 +605,19 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def send_handshake(self):
         # F0 7E 7F 06 01 F7
 
-        header = [0x7E, 0x7F]
+        header = [0xF0, 0x7E, 0x7F]
         data = [0x06, 0x01]
 
-        self.midi.send_sysex(header, data)
+        self.midiout.send_message(header + data + [0xF7])
+        #self.midi.send_sysex(header, data)
 
     def send_disconnect(self):
         #F0 00 01 77 7F 01 09 00 00 00 01 00 75 F7
-        header = [0x00, 0x01, 0x77, 0x7F, 0x01, 0x09] # XXX: probably
+        header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01, 0x09] # XXX: probably
         data = [0x00, 0x00, 0x00, 0x01, 0x00, 0x75] # unknown
         
-        self.midi.send_sysex(header, data)
+        self.midiout.send_message(header + data + [0xF7])
+        #self.midi.send_sysex(header, data)
 
     def _enter_mcu_mode(self):
         self._log('Entering "MCU" mode...', True)
