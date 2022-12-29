@@ -1,7 +1,6 @@
 from PythonMcu.Hardware import NektarPanoramaTSeries
 import logging
 import time
-from PySide2.QtCore import QTimer, Qt
 
 logger = logging.getLogger("PythonMcu")
 def log_wrapper(message, discard):

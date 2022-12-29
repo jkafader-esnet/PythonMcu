@@ -75,6 +75,9 @@ class APIClient(object):
         self.midiout.send_message(message)
         self.txn_id += 1
         self.seq_id += 1
+
+    def send_midi(self, message):
+        self.midiout.send_message(message)
         
     def format_hex(self, message, h=True):
         if h:
@@ -151,6 +154,15 @@ class APIClient(object):
         del self.midiin
         del self.midiout
 
+PRETTY_LOOKUP = {
+    b"PT": b"Pianoteq",
+    b"BF": b"B3 Organ",
+    b"LS": b"Wurlitzer",
+    b"JV/String machine": b"Solina",
+    b"JV/Obxd": b"Oberheim",
+    b"JV/Raffo Synth": b"Minimoog",
+}
+        
 class ZynMCUController(object):
     def __init__(self):
         self.logger = logging.getLogger("ZynMCUController")
@@ -163,13 +175,29 @@ class ZynMCUController(object):
         self.addr=liblo.Address('osc.udp://localhost:1370')
         self.curr_instrument = 0
 
+        self.midiout = rtmidi.MidiOut()
+        self.port_list = self.midiout.get_ports()
+        self.logger.warning("Available ports: %s", self.port_list)
+        self.port_num = None
+        for i in range(len(self.port_list)):
+            port = self.port_list[i]
+            if "Midi Through Port" in port:
+                self.port_num = i
+                break
+        if self.port_num is None:
+            sys.exit("couldn't find appropriate port")
+        self.midiout.open_port(self.port_num)
+
+    def send_midi(self, message):
+        self.midiout.send_message(message)
+        
     def change_instrument(self, increment):
         self.curr_instrument += increment
         if self.curr_instrument >= len(self.client.chain_channels):
             self.curr_instrument = 0
         if self.curr_instrument < 0:
             self.curr_instrument = len(self.client.chain_channels) - 1
-        msg=liblo.Message('/CUIA/LAYER_CONTROL', self.curr_instrument)
+        msg=liblo.Message('/CUIA/LAYER_CONTROL', self.client.chain_channels[self.curr_instrument] + 1)
         liblo.send(self.addr, msg)
 
     def get_current_instrument_channel(self):
@@ -177,7 +205,8 @@ class ZynMCUController(object):
     
     def get_current_instrument_name(self):
         curr_instrument_channel = self.get_current_instrument_channel()
-        return self.client.chain_engines[curr_instrument_channel]
+        chain_name = self.client.chain_engines[curr_instrument_channel]
+        return PRETTY_LOOKUP.get(chain_name, chain_name)
         
     def log_wrapper(self, message, discard):
         self.logger.warning(message)

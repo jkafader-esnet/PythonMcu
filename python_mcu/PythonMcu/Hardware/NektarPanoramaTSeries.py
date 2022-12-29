@@ -140,8 +140,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             84: { "name": "Transport: Play", "set": self.unmapped },
             85: { "name": "Transport: Record", "set": self.unmapped },
 
-            91: {"name": "Track-",      "set": self.change_instrument(direction=1) },
-            92: {"name": "Track+",      "set": self.change_instrument(direction=-1) },
+            91: {"name": "Track-",      "set": self.change_instrument(direction=-1) },
+            92: {"name": "Track+",      "set": self.change_instrument(direction=1) },
             94: {"name": "Browser",     "set": self.patch_list },
             95: {"name": "View",        "set": self.toggle_view },
             99:  {"name": "Mixer",      "set": self.display_settings_page("Instrument 1") },
@@ -240,7 +240,15 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.midiin, self.port_name = open_midiinput(self.port_num)
         self.midiin.ignore_types(sysex=False)
         self.midiin.set_callback(self.receive_midi)
-        
+
+        for i in range(len(self.port_list)):
+            port = self.port_list[i]
+            if "PANORAMA T6 Internal" in port:
+                notes_port_num = i
+                break
+        print("intternal port: #%s" % notes_port_num)
+        self.notesin, self.notesin_port = open_midiinput(notes_port_num)
+        self.notesin.set_callback(self.receive_midi)
         # original version. Commented with import above for reference.
         #self.midi = MidiConnection(callback_log, self.receive_midi)
 
@@ -253,7 +261,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def send_midi(self, message):
         self.callback_log("SEND: "+" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]), "")
         self.midiout.send_message(message)
-        time.sleep(0.001)
+        time.sleep(0.005)
         
     def shift_mode(self, bool):
         if bool:
@@ -433,6 +441,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self.set_active_track(1)
 
+        inst_name = self.controller.get_current_instrument_name()
+        self.set_display_area("focus_name", ["Instrument:"])
+        self.set_display_area("focus_value", [inst_name.decode("UTF-8")])
+
+
     def printable_hex(self, header, message):
         return (" ".join([hex(b).replace("0x", '').zfill(2) for b in self.compose_full_message(header+message)])).upper()
 
@@ -599,8 +612,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 return
             self.controller.change_instrument(direction)
             inst_name = self.controller.get_current_instrument_name()
-            self.set_display_area("focus_name", ["Current Instrument:"])
-            self.set_display_area("focus_value", [inst_name])
+            self.set_display_area("focus_name", ["Instrument:"])
+            self.set_display_area("focus_value", [inst_name.decode("UTF-8")])
             #if self.active_track < 1:
             #    self.active_track = 8
             #if self.active_track > 8:
@@ -717,9 +730,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.callback_log("RECV: %s" % (" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]),), "")
         if message[0] == 0xF0 and message[-1] == 0xF7:
             self.process_sysex(message=message)
+        else:
+            self.controller.send_midi(message)
         if message[0] == 0xB0:
             self.process_control(control=message[1], value=message[2])
-
         pass
     #     if (message[0] == 0xF0) and (message[-1] == 0xF7):
     #         if (message[1:4] == self.MIDI_MANUFACTURER_ID) and (message[4:10] == self.MIDI_DEVICE_ID):
