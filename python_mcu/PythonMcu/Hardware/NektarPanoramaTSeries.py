@@ -32,6 +32,7 @@ if __name__ == "__main__":
     sys.path.append('../../../')
 
 from PythonMcu.Hardware.MidiControllerTemplate import MidiControllerTemplate
+from PythonMcu.configuration.patches import patches
 #from PythonMcu.Midi.MidiConnection import MidiConnection
 import rtmidi
 from rtmidi.midiutil import open_midiinput
@@ -102,15 +103,16 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.controller = controller
         self.active_track = 1
         self.mode = "mixer"
+        self.shift_mode = False
         self.controls = {
-            0: {"name": "Fader 1", "set": self.set_track_volume(0) },
-            1: {"name": "Fader 2", "set": self.set_track_volume(1) },
-            2: {"name": "Fader 3", "set": self.set_track_volume(2) },
-            3: {"name": "Fader 4", "set": self.set_track_volume(3) },
-            4: {"name": "Fader 5", "set": self.set_track_volume(4) },
-            5: {"name": "Fader 6", "set": self.set_track_volume(5) },
-            6: {"name": "Fader 7", "set": self.set_track_volume(6) },
-            7: {"name": "Fader 8", "set": self.set_track_volume(7) },
+            0: {"name": "Fader 1", "set": self.set_track_value(0) },
+            1: {"name": "Fader 2", "set": self.set_track_value(1) },
+            2: {"name": "Fader 3", "set": self.set_track_value(2) },
+            3: {"name": "Fader 4", "set": self.set_track_value(3) },
+            4: {"name": "Fader 5", "set": self.set_track_value(4) },
+            5: {"name": "Fader 6", "set": self.set_track_value(5) },
+            6: {"name": "Fader 7", "set": self.set_track_value(6) },
+            7: {"name": "Fader 8", "set": self.set_track_value(7) },
 
             48: {"name": "Rotary 1", "set": self.set_rotary_value(0) },
             49: {"name": "Rotary 2", "set": self.set_rotary_value(1) },
@@ -121,17 +123,17 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             54: {"name": "Rotary 7", "set": self.set_rotary_value(6) },
             55: {"name": "Rotary 8", "set": self.set_rotary_value(7) },
 
-            16: { "name": "Track 1 Button", "set": self.toggle_function(1) },
-            17: { "name": "Track 2 Button", "set": self.toggle_function(2) },
-            18: { "name": "Track 3 Button", "set": self.toggle_function(3) },
-            19: { "name": "Track 4 Button", "set": self.toggle_function(4) },
-            20: { "name": "Track 5 Button", "set": self.toggle_function(5) },
-            21: { "name": "Track 6 Button", "set": self.toggle_function(6) },
-            22: { "name": "Track 7 Button", "set": self.toggle_function(7) },
-            23: { "name": "Track 8 Button", "set": self.toggle_function(8) },
+            16: { "name": "Track 1 Button", "set": self.toggle_button_value(0) },
+            17: { "name": "Track 2 Button", "set": self.toggle_button_value(1) },
+            18: { "name": "Track 3 Button", "set": self.toggle_button_value(2) },
+            19: { "name": "Track 4 Button", "set": self.toggle_button_value(3) },
+            20: { "name": "Track 5 Button", "set": self.toggle_button_value(4) },
+            21: { "name": "Track 6 Button", "set": self.toggle_button_value(5) },
+            22: { "name": "Track 7 Button", "set": self.toggle_button_value(6) },
+            23: { "name": "Track 8 Button", "set": self.toggle_button_value(7) },
 
             94: { "name": "Track Master Button", "set": self.panic },
-            96: { "name": "Shift", "set": self.shift_mode },
+            96: { "name": "Shift", "set": self.set_shift_mode },
 
             80: { "name": "Transport: Loop", "set": self.unmapped },
             81: { "name": "Transport: Reverse", "set": self.unmapped },
@@ -148,61 +150,14 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             100: {"name": "Instrument", "set": self.display_settings_page("Instrument 2") },
             101: {"name": "Multi",      "set": self.display_settings_page("Routing/Effects")},
             101: {"name": "Internal",   "set": self.display_settings_page("Routing/Effects")},
+
+            106: {"name": "Soft Button 0", "set": self.soft_button(0) },
+            107: {"name": "Soft Button 1", "set": self.soft_button(1) },
+            108: {"name": "Soft Button 2", "set": self.soft_button(2) },
+            109: {"name": "Soft Button 3", "set": self.soft_button(3) },
         }
-        patches ={
-            "moog": {
-                "F0": {"name": "Osc1 Octave",      "group": "OSC",     "set": self.vtrack_setter(0),  "value": 91 },
-                "F1": {"name": "Osc1 Shape",       "group": "OSC",     "set": self.vtrack_setter(1),  "value": 91 },
-                "F2": {"name": "Osc2 Octave",      "group": "OSC",     "set": self.vtrack_setter(2),  "value": 91 },
-                "F3": {"name": "Osc2 Fine",        "group": "OSC",     "set": self.vtrack_setter(3),  "value": 91 },
-                "F4": {"name": "Osc2 Shape",       "group": "OSC",     "set": self.vtrack_setter(4),  "value": 91 },
-                "F5": {"name": "Osc3 Octave",      "group": "OSC",     "set": self.vtrack_setter(5),  "value": 91 },
-                "F6": {"name": "Osc3 Fine",        "group": "OSC",     "set": self.vtrack_setter(6),  "value": 91 },
-                "F7": {"name": "Osc3 Shape",       "group": "OSC",     "set": self.vtrack_setter(7),  "value": 91 },
-                "F8": {"name": "VCA  Attack",      "group": "ENV",     "set": self.vtrack_setter(8),  "value": 91 },
-                "F9": {"name": "VCA  Decay",       "group": "ENV",     "set": self.vtrack_setter(9),  "value": 91 },
-                "F10": {"name": "VCA  Sustain",    "group": "ENV",     "set": self.vtrack_setter(10), "value": 91 },
-                "F11": {"name": "VCA  Release",    "group": "ENV",     "set": self.vtrack_setter(11), "value": 91 },
-                "F12": {"name": "VCF  Attack",     "group": "ENV",     "set": self.vtrack_setter(12), "value": 91 },
-                "F13": {"name": "VCF  Decay",      "group": "ENV",     "set": self.vtrack_setter(13), "value": 91 },
-                "F14": {"name": "VCF  Sustain",    "group": "ENV",     "set": self.vtrack_setter(14), "value": 91 },
-                "F15": {"name": "VCF  Release",    "group": "ENV",     "set": self.vtrack_setter(15), "value": 91 },
-                "P0": {"name": "Cutoff",           "group": "FLT/MIX", "set": self.vpot_setter(0),    "value": 64 },
-                "P1": {"name": "Resonance",        "group": "FLT/MIX", "set": self.vpot_setter(1),    "value": 64 },
-                "P2": {"name": "Env Amount",       "group": "FLT/MIX", "set": self.vpot_setter(2),    "value": 64 },
-                "P3": {"name": "Portamento",       "group": "FLT/MIX", "set": self.vpot_setter(3),    "value": 64 },
-                "P4": {"name": "Noise Level",      "group": "FLT/MIX", "set": self.vpot_setter(4),    "value": 64 },
-                "P5": {"name": "Osc1 Level",       "group": "FLT/MIX", "set": self.vpot_setter(5),    "value": 64 },
-                "P6": {"name": "Osc2 Level",       "group": "FLT/MIX", "set": self.vpot_setter(6),    "value": 64 },
-                "P7": {"name": "Osc3 Lvl/Mod Amt", "group": "FLT/MIX", "set": self.vpot_setter(7),    "value": 64 },
-                "B0": {"name": "Oscillator Mod",   "group": "BUTTONS", "set": self.vbutton_setter(0), "value": 0 },
-                "B1": {"name": "Filter Mod",       "group": "BUTTONS", "set": self.vbutton_setter(1), "value": 0 },
-                "B2": {"name": "Keyboard->Osc1",   "group": "BUTTONS", "set": self.vbutton_setter(2), "value": 127 },
-                "B3": {"name": "Keyboard->Osc2",   "group": "BUTTONS", "set": self.vbutton_setter(3), "value": 127 },
-                "B4": {"name": "Keyboard->Osc3",   "group": "BUTTONS", "set": self.vbutton_setter(4), "value": 0 },
-                "B5": {"name": "Noise Color",      "group": "BUTTONS", "set": self.vbutton_setter(5), "value": 0 },
-                "B6": {"name": "A-440 Sync",       "group": "BUTTONS", "set": self.vbutton_setter(6), "value": 127 },
-                "B7": {"name": "Main Output",      "group": "BUTTONS", "set": self.vbutton_setter(7), "value": 127 },
-            },
-            "ob-xd": {
-                "OSC/FLT": {},
-                "MOD": {},
-                "FLT": {},
-            },
-            "hammond": {
-                0: {"name": "Draw [16']",     "set": self.vtrack_setter(0, invert=True), "value": 91 },
-                1: {"name": "Draw [5  1/3']", "set": self.vtrack_setter(1, invert=True), "value": 91 },
-                2: {"name": "Draw [8']",      "set": self.vtrack_setter(2, invert=True), "value": 91 },
-                3: {"name": "Draw [4']",      "set": self.vtrack_setter(3, invert=True), "value": 91 },
-                4: {"name": "Draw [2  2/3']", "set": self.vtrack_setter(4, invert=True), "value": 91 },
-                5: {"name": "Draw [2']",      "set": self.vtrack_setter(5, invert=True), "value": 91 },
-                6: {"name": "Draw [1  3/5']", "set": self.vtrack_setter(6, invert=True), "value": 91 },
-                7: {"name": "Draw [1  1/3']", "set": self.vtrack_setter(7, invert=True), "value": 91 },
-            }
-        } 
-        self.faders = { name: fader for name, fader in patches[patch].items() if name.startswith("F") }
-        self.rotaries = { name: rotary for name, rotary in patches[patch].items() if name.startswith("P") }
-        self.buttons = { name: button for name, button in patches[patch].items() if name.startswith("B") }
+        self.current_instrument = patch
+        self.setup_mappings()
 
         self.display_lcd_available = True
         self.automated_faders_available = False
@@ -252,37 +207,30 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # original version. Commented with import above for reference.
         #self.midi = MidiConnection(callback_log, self.receive_midi)
 
-    def toggle_function(self, num):
-        pass
+    def setup_mappings(self):
+        self.vcontrols = { name: fader for name, fader in patches[self.current_instrument].items() if name not in ["groups", "shift"] }
+        self.groups = patches[self.current_instrument]["groups"]
+        self.shift = patches[self.current_instrument]["shift"]
+        self.selected_group = 0
+
+    def soft_button(self, num):
+        def setter(value):
+            if value == 127:
+                self.selected_group = num
+                self.render_display()
+        return setter
 
     def panic(self):
         pass
 
     def send_midi(self, message):
-        self.callback_log("SEND: "+" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]), "")
         self.midiout.send_message(message)
-        time.sleep(0.005)
+        if message[0] == 0xF0:
+            time.sleep(0.005)
         
-    def shift_mode(self, bool):
-        if bool:
-            self.pan_mode()
-            self.set_display_area("focus_name", ["You Pressed"])
-            self.set_display_area("focus_value", ["Shift!"])
-            self.set_display_area("menu_name", ["OHHH", "DAMN!"])
-            self.set_display_area("pan_names_1-4", ["A", "B", "C", "D",])
-            self.set_display_area("pan_names_5-8", ["D", "E", "F", "G",])
-            self.set_display_area("pan_values_1-4", ["A", "B", "C", "D",])
-            self.set_display_area("pan_values_5-8", ["D", "E", "F", "G",])
-            self.set_display_area("soft_buttons", ["OH", "NO", "YOU", "DIDN'T"])
-        else:
-            self.mixer_mode()
-            self.set_display_area("focus_name", ["You Released"])
-            self.set_display_area("focus_value", ["Shift!"])
-            self.set_track_names([track['name'] for num, track in self.faders.items()])
-            self.set_button_labels(['SOUND1', 'SOUND2', '', 'FX', ''])
-            for key, track in self.faders.items():
-                track['set'](track['value'], invert=False) # never invert the last value...
-
+    def set_shift_mode(self, mode):
+        self.shift_mode = bool(mode)
+        self.render_display()
 
     def unmapped(self, *args, **kwargs):
         pass
@@ -300,32 +248,50 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_rotary_value(self, track_number):
         def set(value):
-            self.rotaries["P%s" % track_number]["set"](value)
+            self._log("XXX: this needs to calculate an offset from the current page instead")
+            func_name = self.vcontrols["P%s" % track_number]["set"]
+            parameters = self.vcontrols["P%s" % track_number]["param"]
+            getattr(self, func_name)(**parameters)(value)
         return set
 
-    def set_track_volume(self, track_number):
+    def toggle_button_value(self, track_number):
+        def setter(value):
+            self._log("XXX: this needs to calculate an offset from the current page instead")
+            func_name = self.vcontrols["B%s" % track_number]["set"]
+            parameters = self.vcontrols["B%s" % track_number]["param"]
+            if(value): # if this is button _press_ rather than _release_
+                # toggle the value
+                curval = self.vcontrols["B%s" % track_number]["value"]
+                newval = 0 if curval == 127 else 127
+                getattr(self, func_name)(**parameters)(newval)
+        return setter
+
+    def set_track_value(self, track_number):
         def set(value):
-            self.faders["F%s" % track_number]["set"](value)
+            self._log("XXX: this needs to calculate an offset from the current page instead")
+            func_name = self.vcontrols["F%s" % track_number]["set"]
+            parameters = self.vcontrols["F%s" % track_number]["param"]
+            getattr(self, func_name)(**parameters)(value)
         return set
 
     def set_vtrack_value(self, fader_number, value):
         self.send_midi([0xB0, fader_number, value])
         #self.midi.send(0xB0, fader_number, value)
 
-    def vtrack_setter(self, track_number, invert=False):
-        def set(value, invert=invert):
+    def vtrack_setter(self, track, invert=False):
+        def set(value, invert=invert, changed=True):
             if invert:
                 value = 127 - value
-            self.faders["F%s" % track_number]["value"] = value
-            self.set_vtrack_value(track_number, value)
+            self.vcontrols["F%s" % track]["value"] = value
+            self.set_vtrack_value(track, value)
         return set
 
     def set_vpot_value(self, track_number, value):
-        offset = 48 # first pot control number
+        offset = 48 # first pot control numbere
         self.send_midi([0xB0, offset + track_number, value])
     
-    def vpot_setter(self, track_number, invert=False):
-        def set(value, invert=invert):
+    def vpot_setter(self, track, invert=False):
+        def set(value, invert=invert, changed=True):
             if value == 127:
                 if invert:
                     value = -1
@@ -336,20 +302,23 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                     value = 1
                 else:
                     value = -1
-            self.rotaries["F%s" % track_number]["value"] += value
-            self.set_vpot_value(track_number, value)
+            if value not in [1, -1]:
+                value = 0
+            if changed:
+                self.vcontrols["P%s" % track]["value"] += value
+            self.set_vpot_value(track, value)
         return set
 
     def set_vbutton_value(self, track_number, value):
-        offset = 48 # first pot control number
+        offset = 16 # first button control number
         self.send_midi([0xB0, offset + track_number, value])
     
-    def vbutton_setter(self, track_number, invert=False):
-        def set(value, invert=invert):
+    def vbutton_setter(self, track, invert=False):
+        def set(value, invert=invert, changed=True):
             if invert:
                 value = 0 if value == 127 else 127
-            self.buttons["B%s" % track_number]["value"] = value
-            self.set_vbutton_value(track_number, value)
+            self.vcontrols["B%s" % track]["value"] = value
+            self.set_vbutton_value(track, value)
         return set
 
     @staticmethod
@@ -360,7 +329,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def _log(self, message, repaint=False):
         self.callback_log('[Nektar Panorama T6]  ' + message, repaint)
 
-    def mixer_mode(self):
+    def set_mixer_mode(self):
         self.mode = "mixer"
         data = [0x06, 0x02, 0x7F, 0x00, 0x00]
         self.send_midi(self.standard_syx_header + data + [0xF7])
@@ -369,7 +338,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         #return self.midi.send_sysex(self.standard_syx_header, data)
 
-    def pan_mode(self):
+    def set_pan_mode(self):
         self.mode = "pan"
         data = [0x06, 0x10, 0x7F, 0x00, 0x00]
         return self.send_midi(self.standard_syx_header + data + [0xF7])
@@ -392,7 +361,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                F7 (header)
         # F0 00 01 77 7F 01 06 02 7F 00 00 F7
-        self.mixer_mode()
+        self.set_mixer_mode()
         # B0 00 00
 
         group_1 = [i for i in range(0x00, 0x08)]
@@ -416,7 +385,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self.midi.send_sysex(self.standard_syx_header, data)
         # F0 00 01 77 7F 01                F7 (header)
         # F0 00 01 77 7F 01 06 02 7F 00 00 F7
-        self.mixer_mode()
+        self.set_mixer_mode()
 
         faders = group_1 + group_2 + [0x08] + group_3 + group_4
         for fader in faders:
@@ -434,17 +403,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
         self.set_display_area('unknown', ['', '', ''])
 
-        self.set_track_names([track['name'] for num, track in self.faders.items()])
-        self.set_button_labels(['SOUND1', 'SOUND2', '', 'FX', ''])
-        for key, track in self.faders.items():
-            track['set'](track['value'])
-
-        self.set_active_track(1)
-
-        inst_name = self.controller.get_current_instrument_name()
-        self.set_display_area("focus_name", ["Instrument:"])
-        self.set_display_area("focus_value", [inst_name.decode("UTF-8")])
-
+        self.render_display()
 
     def printable_hex(self, header, message):
         return (" ".join([hex(b).replace("0x", '').zfill(2) for b in self.compose_full_message(header+message)])).upper()
@@ -468,6 +427,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         return output
 
     def set_display_area(self, area, data):
+        unimplemented = ["soft_button_highlight",]
+        if(area in unimplemented):
+            self._log("XXX: area %s is unimplemented" % area)
+            return
         areas = { 
             "unknown": { 
                 "header": bytes([ 0x06, 0x00, 0x01 ]), 
@@ -525,13 +488,18 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 "header": bytes([0x06, 0x00, 0x07]),
                 "data_length": 4,
                 "offset": 0x04
+            },
+            "soft_button_highlight": {
+                "header": bytes([0x06, 0x00, 0x01]),
+                "data_length": 1,
+                "offset": 0x00
             }
         }
         if area not in areas:
             raise Exception("Display area %s not found" % area)
         data_length = areas[area]['data_length']
         if len(data) != data_length:
-            raise Exception("Wrong string count for area %s. You provided %s strings but %s are required")
+            raise Exception("Wrong string count for area %s. You provided %s strings but %s are required" % (area, len(data), areas[area]['data_length']))
         formatter = areas[area].get('format', self.format_string_array)
         header = areas[area]['header']
         offset = areas[area]['offset']
@@ -599,21 +567,79 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self.midi.send_sysex(self.standard_syx_header, message)
 
     def set_track_names(self, track_names):
+        if len(track_names) > 8:
+            self._log("Too many track names. Truncating to 8")
+            track_names = track_names[:8]
+        if len(track_names) < 8:
+            self._log("Not enough track names. Padding with empty strings to 8")
+            track_names += [''] * (8 - len(track_names))
         self.set_display_area("track_names_1-4", track_names[0:4])
         self.set_display_area("track_names_5-8", track_names[4:8])
+
+    def set_pan_names(self, track_names):
+        if len(track_names) > 8:
+            self._log("Too many track names. Truncating to 8")
+            track_names = track_names[:8]
+        if len(track_names) < 8:
+            self._log("Not enough track names. Padding with empty strings to 8")
+            track_names += [''] * (8 - len(track_names))
+        self.set_display_area("pan_names_1-4", track_names[0:4])
+        self.set_display_area("pan_names_5-8", track_names[4:8])
 
 
     def register_change_instrument(callable):
         self.instrument_change_callback = callable
-        
+    
+    def resolve_track_setter(self, func_name):
+        return getattr(self, func_name)
+
+    def render_display(self):
+        if self.shift_mode:
+            group_data = self.shift[self.selected_group]
+        else:
+            group_data = self.groups[self.selected_group]
+        if group_data["layout"] == "track":
+            self.set_mixer_mode()
+        if group_data["layout"] == "pan":
+            self.set_pan_mode()
+        if group_data["layout"] == "blank":
+            self.set_mixer_mode()
+            return
+        self.set_display_area("focus_name", ["Instrument:"])
+        self.set_display_area("focus_value", [self.current_instrument.decode("UTF-8")])
+        if not self.shift_mode:
+            self.set_button_labels([group["name"] for group in self.groups])
+            selected_group_name = self.groups[self.selected_group]["name"]
+        if self.shift_mode:
+            self.set_button_labels([group["name"] for group in self.shift])
+            selected_group_name = self.shift[self.selected_group]["name"]
+        if group_data["layout"] == "track":
+            track_names = []
+            for name, track in self.vcontrols.items():
+                if selected_group_name in track["groups"] and name[0] == "F":
+                    track_names.append(track["name"])
+            self.set_track_names(track_names)
+        if group_data["layout"] == "pan":
+            track_names = []
+            for name, track in self.vcontrols.items():
+                if selected_group_name in track["groups"] and name[0] == "P":
+                    track_names.append(track["name"])
+            self.set_pan_names(track_names)
+        self.set_active_track(1)
+        for key, track in self.vcontrols.items():
+            setter = self.resolve_track_setter(track['set'])
+            set_track = setter(**track['param'])
+            set_track(track['value'], invert=False, changed=False)            
+
     def change_instrument(self, direction):
         def change(data):
             if(data)!=127:
                 return
             self.controller.change_instrument(direction)
-            inst_name = self.controller.get_current_instrument_name()
-            self.set_display_area("focus_name", ["Instrument:"])
-            self.set_display_area("focus_value", [inst_name.decode("UTF-8")])
+            self.current_instrument = self.controller.get_current_instrument_name()
+            self.selected_group = 0
+            self.setup_mappings()
+            self.render_display()
             #if self.active_track < 1:
             #    self.active_track = 8
             #if self.active_track > 8:
@@ -727,7 +753,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     # --- MIDI processing ---
     def receive_midi(self, data, something):
         message, timestamp = data
-        self.callback_log("RECV: %s" % (" ".join([hex(c).replace("0x", "").upper().zfill(2) for c in message]),), "")
         if message[0] == 0xF0 and message[-1] == 0xF7:
             self.process_sysex(message=message)
         else:
