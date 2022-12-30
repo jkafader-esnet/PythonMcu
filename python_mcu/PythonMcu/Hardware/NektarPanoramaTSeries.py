@@ -208,7 +208,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self.midi = MidiConnection(callback_log, self.receive_midi)
 
     def setup_mappings(self):
-        self.vcontrols = { name: fader for name, fader in patches[self.current_instrument].items() if name not in ["groups", "shift"] }
+        self.vcontrols = { name: ctrl for name, ctrl in patches[self.current_instrument].items() if name not in ["groups", "shift"] }
         self.groups = patches[self.current_instrument]["groups"]
         self.shift = patches[self.current_instrument]["shift"]
         self.selected_group = 0
@@ -604,7 +604,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.set_pan_mode()
         if group_data["layout"] == "blank":
             self.set_mixer_mode()
-            return
         self.set_display_area("focus_name", ["Instrument:"])
         self.set_display_area("focus_value", [self.current_instrument.decode("UTF-8")])
         if not self.shift_mode:
@@ -613,7 +612,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         if self.shift_mode:
             self.set_button_labels([group["name"] for group in self.shift])
             selected_group_name = self.shift[self.selected_group]["name"]
-        if group_data["layout"] == "track":
+        if group_data["layout"] == "track" or group_data["layout"] == "blank":
             track_names = []
             for name, track in self.vcontrols.items():
                 if selected_group_name in track["groups"] and name[0] == "F":
