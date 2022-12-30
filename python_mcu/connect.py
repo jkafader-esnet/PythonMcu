@@ -6,7 +6,7 @@ logger = logging.getLogger("PythonMcu")
 def log_wrapper(message, discard):
     logger.warning(message)
 
-patch = b"B3 Organ"
+patch = b"Pianoteq"
 
 INSTRUMENTS = [
     b"Pianoteq",
