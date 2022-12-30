@@ -21,7 +21,7 @@ class DummyController(object):
     def __init__(self):
         self.inst_ptr = 0
     def get_current_instrument_name(*args, **kwargs):
-        return b"B3 Organ"
+        return b"Pianoteq"
     def change_instrument(self, increment):
         self.inst_ptr += increment
         if self.inst_ptr >= len(INSTRUMENTS):
