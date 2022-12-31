@@ -36,6 +36,7 @@ from PythonMcu.configuration.patches import patches
 #from PythonMcu.Midi.MidiConnection import MidiConnection
 import rtmidi
 from rtmidi.midiutil import open_midiinput
+import threading
 
 
 class NektarPanoramaTSeries(MidiControllerTemplate):
@@ -104,6 +105,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.active_track = 1
         self.mode = "mixer"
         self.shift_mode = False
+        self.timer = None
         self.controls = {
             0: {"name": "Fader 1", "set": self.set_track_value(0) },
             1: {"name": "Fader 2", "set": self.set_track_value(1) },
@@ -213,6 +215,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.shift = patches[self.current_instrument]["shift"]
         self.selected_group = 0
 
+    def highlight_soft_button(self, num):
+        offset = 106
+        self.send_midi([0xB0, offset+num, 127])
+
     def soft_button(self, num):
         def setter(value):
             if value == 127:
@@ -248,7 +254,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_rotary_value(self, track_number):
         def set(value):
-            self._log("XXX: this needs to calculate an offset from the current page instead")
             func_name = self.vcontrols["P%s" % track_number]["set"]
             parameters = self.vcontrols["P%s" % track_number]["param"]
             getattr(self, func_name)(**parameters)(value)
@@ -256,7 +261,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def toggle_button_value(self, track_number):
         def setter(value):
-            self._log("XXX: this needs to calculate an offset from the current page instead")
             func_name = self.vcontrols["B%s" % track_number]["set"]
             parameters = self.vcontrols["B%s" % track_number]["param"]
             if(value): # if this is button _press_ rather than _release_
@@ -268,58 +272,104 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_track_value(self, track_number):
         def set(value):
-            self._log("XXX: this needs to calculate an offset from the current page instead")
-            func_name = self.vcontrols["F%s" % track_number]["set"]
-            parameters = self.vcontrols["F%s" % track_number]["param"]
+            keys = [k for k in self.visible_controls.keys()]
+            self._log("%s %s" % (len(keys), track_number))
+            if track_number >= len(keys):
+                return
+            track_name = keys[track_number]
+            func_name = self.visible_controls[track_name]["set"]
+            parameters = self.visible_controls[track_name]["param"]
             getattr(self, func_name)(**parameters)(value)
         return set
 
     def set_vtrack_value(self, fader_number, value):
         self.send_midi([0xB0, fader_number, value])
-        #self.midi.send(0xB0, fader_number, value)
 
     def vtrack_setter(self, track, invert=False):
         def set(value, invert=invert, changed=True):
             if invert:
                 value = 127 - value
-            self.vcontrols["F%s" % track]["value"] = value
-            self.set_vtrack_value(track, value)
+            track_name = "F%s" % track
+            control = self.visible_controls[track_name]
+            control["value"] = value
+            screen_position = control["current_screen_position"]
+            self.set_vtrack_value(screen_position, value)
+
+            focus_name = control.get("long_name", control.get("name", ""))
+            if changed:
+                self.set_display_area("focus_name", [focus_name,])
+                self.set_display_area("focus_value", ["%s" % control['value']])
+                self.countdown_to_instrument()
         return set
 
     def set_vpot_value(self, track_number, value):
         offset = 48 # first pot control numbere
         self.send_midi([0xB0, offset + track_number, value])
+
+    def countdown_to_instrument(self, seconds=3):
+        if hasattr(self.timer, "cancel"):
+            self.timer.cancel()
+        def display_instrument():
+            self.set_display_area("focus_name", ["Instrument:"])
+            self.set_display_area("focus_value", [self.current_instrument.decode("UTF-8")])
+        self.timer = threading.Timer(seconds, display_instrument)
+        self.timer.start()
     
     def vpot_setter(self, track, invert=False):
         def set(value, invert=invert, changed=True):
+            control_name = "P%s" % track
+            control = self.visible_controls[control_name]
+            delta = value
             if value == 127:
-                if invert:
-                    value = -1
-                else:
-                    value = 1
-            if value == 0:
-                if invert:
-                    value = 1
-                else:
-                    value = -1
-            if value not in [1, -1]:
-                value = 0
+                delta = -1
+            if value == 124:
+                delta = -4
+            if value == 122:
+                delta = -6
+            if invert:
+                delta = -1 * delta
+            if delta not in [6, 4, 1, -1, -4, -6]:
+                delta = 0
+            self._log("Delta = %s" % delta)
             if changed:
-                self.vcontrols["P%s" % track]["value"] += value
-            self.set_vpot_value(track, value)
+                control["value"] += delta
+                if control["value"] <= 0:
+                    control["value"] = 0
+                if control["value"] >= 127:
+                    control["value"] = 127
+                focus_name = control.get("long_name", control.get("name", ""))
+                self.set_display_area("focus_name", [focus_name,])
+                self.set_display_area("focus_value", ["%s" % control['value']])
+            screen_position = control["current_screen_position"]
+            self.set_vpot_value(screen_position, control["value"])
         return set
 
     def set_vbutton_value(self, track_number, value):
         offset = 16 # first button control number
         self.send_midi([0xB0, offset + track_number, value])
     
-    def vbutton_setter(self, track, invert=False):
-        def set(value, invert=invert, changed=True):
-            if invert:
-                value = 0 if value == 127 else 127
-            self.vcontrols["B%s" % track]["value"] = value
-            self.set_vbutton_value(track, value)
-        return set
+    def vbutton_setter(self, track, invert=False, exclusive_with=[]):
+        def setter(value, invert=invert, changed=True, force=True):
+            control_name = "B%s" % track
+            control = self.visible_buttons[control_name]
+            if value == 127 and changed: # value = 127 represents "button down"
+                value = 0 if control["value"] == 127 else 127 # if the button has been pressed, toggle the value
+            if changed or force:
+                control["value"] = value
+            button_position = control["current_button_position"]
+            self.set_vbutton_value(button_position, control['value'])
+            if changed:
+                for ctrl in exclusive_with:
+                    other_control_name = "B%s" % ctrl
+                    other_control = self.visible_buttons[other_control_name]
+                    setter = self.resolve_track_setter(other_control['set'])
+                    set_track = setter(**other_control['param'])
+                    set_track(0, invert=False, changed=False, force=True)
+                focus_name = control.get("long_name", control.get("name", ""))
+                self.set_display_area("focus_name", [focus_name,])
+                self.set_display_area("focus_value", ["%s" % control['value']])
+                self.countdown_to_instrument()
+        return setter
 
     @staticmethod
     def get_usage_hint():
@@ -427,7 +477,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         return output
 
     def set_display_area(self, area, data):
-        unimplemented = ["soft_button_highlight",]
+        unimplemented = []
         if(area in unimplemented):
             self._log("XXX: area %s is unimplemented" % area)
             return
@@ -489,11 +539,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 "data_length": 4,
                 "offset": 0x04
             },
-            "soft_button_highlight": {
-                "header": bytes([0x06, 0x00, 0x01]),
-                "data_length": 1,
-                "offset": 0x00
-            }
         }
         if area not in areas:
             raise Exception("Display area %s not found" % area)
@@ -612,23 +657,45 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         if self.shift_mode:
             self.set_button_labels([group["name"] for group in self.shift])
             selected_group_name = self.shift[self.selected_group]["name"]
-        if group_data["layout"] == "track" or group_data["layout"] == "blank":
-            track_names = []
-            for name, track in self.vcontrols.items():
-                if selected_group_name in track["groups"] and name[0] == "F":
-                    track_names.append(track["name"])
-            self.set_track_names(track_names)
+        track_names = []
+        self.visible_controls = {}
+        self.visible_buttons = {}
+        current_position = 0
+        button_position = 0
+        selector = "F"
         if group_data["layout"] == "pan":
-            track_names = []
-            for name, track in self.vcontrols.items():
-                if selected_group_name in track["groups"] and name[0] == "P":
-                    track_names.append(track["name"])
+            selector = "P"
+        for name, track in self.vcontrols.items():
+            if selected_group_name in track["groups"] and name[0] == selector:
+                track_names.append(track["name"])
+                self.visible_controls[name] = track
+                self.visible_controls[name]["current_screen_position"] = current_position
+                current_position += 1
+            if selected_group_name in track["groups"] and name[0] == "B":
+                self.visible_buttons[name] = track
+                self.visible_buttons[name]["current_button_position"] = button_position
+                button_position += 1
+        if group_data["layout"] in ["track", "blank"]:
+            self.set_track_names(track_names)
+        if group_data["layout"] in ["pan",]:
             self.set_pan_names(track_names)
         self.set_active_track(1)
-        for key, track in self.vcontrols.items():
+        self.highlight_soft_button(self.selected_group)
+        for name, track in self.visible_controls.items():
             setter = self.resolve_track_setter(track['set'])
             set_track = setter(**track['param'])
-            set_track(track['value'], invert=False, changed=False)            
+            set_track(track['value'], invert=False, changed=False)
+        for i in range(len(self.visible_controls),8):
+            if selector == "P":
+                self.set_vpot_value(i, 0)
+            else:
+                self.set_vtrack_value(i, 0)
+        for name, button in self.visible_buttons.items():
+            setter = self.resolve_track_setter(button['set'])
+            set_track = setter(**button['param'])
+            set_track(button['value'], invert=False, changed=False)
+        for i in range(len(self.visible_buttons),8):
+            self.set_vbutton_value(i, 0)
 
     def change_instrument(self, direction):
         def change(data):
