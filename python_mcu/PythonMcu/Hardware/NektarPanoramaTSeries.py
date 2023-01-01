@@ -299,7 +299,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if changed:
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
-                self.countdown_to_instrument()
         return set
 
     def set_vpot_value(self, track_number, value):
@@ -312,6 +311,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         def display_instrument():
             self.set_display_area("focus_name", ["Instrument:"])
             self.set_display_area("focus_value", [self.current_instrument.decode("UTF-8")])
+            self.countdown_to_instrument(seconds=seconds)
         self.timer = threading.Timer(seconds, display_instrument)
         self.timer.start()
     
@@ -368,7 +368,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 focus_name = control.get("long_name", control.get("name", ""))
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
-                self.countdown_to_instrument()
         return setter
 
     @staticmethod
@@ -452,7 +451,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                                  F7 (header)
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
         self.set_display_area('unknown', ['', '', ''])
-
+        self.countdown_to_instrument(seconds=3)
         self.render_display()
 
     def printable_hex(self, header, message):
