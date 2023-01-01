@@ -1,16 +1,16 @@
 patches = {
     b"Pianoteq": {
         "groups": [
-            {"name": "NO",    "layout": "blank"}, 
-            {"name": "CTRLS", "layout": "blank"},
-            {"name": "-",        "layout": "blank" },
-            {"name": "-",        "layout": "blank" },
+            {"name": "NO",    "layout": "blank" }, 
+            {"name": "CTRLS", "layout": "blank" },
+            {"name": "JUST",  "layout": "blank" },
+            {"name": "PLAY",  "layout": "blank" },
         ],
         "shift": [
-            {"name": "NO",    "layout": "blank"}, 
-            {"name": "CTRLS", "layout": "blank"},
-            {"name": "-",        "layout": "blank" },
-            {"name": "-",        "layout": "blank" },
+            {"name": "NO",    "layout": "blank" }, 
+            {"name": "CTRLS", "layout": "blank" },
+            {"name": "JUST",  "layout": "blank" },
+            {"name": "PLAY",  "layout": "blank" },
         ],
     },
     b"B3 Organ": {
