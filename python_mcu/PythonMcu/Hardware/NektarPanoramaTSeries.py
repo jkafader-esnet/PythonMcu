@@ -299,10 +299,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if changed:
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
+                self.controller.send_control_change(control.get("name"), 127 - control.get("value") if invert else control.get("value"))
         return set
 
     def set_vpot_value(self, track_number, value):
-        offset = 48 # first pot control numbere
+        offset = 48 # first pot control number
         self.send_midi([0xB0, offset + track_number, value])
 
     def countdown_to_instrument(self, seconds=3):
@@ -820,10 +821,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         message, timestamp = data
         if message[0] == 0xF0 and message[-1] == 0xF7:
             self.process_sysex(message=message)
+        elif message[0] == 0xB0:
+            self.process_control(control=message[1], value=message[2])
         else:
             self.controller.send_midi(message)
-        if message[0] == 0xB0:
-            self.process_control(control=message[1], value=message[2])
         pass
     #     if (message[0] == 0xF0) and (message[-1] == 0xF7):
     #         if (message[1:4] == self.MIDI_MANUFACTURER_ID) and (message[4:10] == self.MIDI_DEVICE_ID):
