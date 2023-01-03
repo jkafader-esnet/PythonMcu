@@ -21,6 +21,18 @@ COMMANDS = {
     'SET_CHAIN_PATCH': 0x71,
 }
 
+CONTROL_MAPPING = {
+    "Draw [16']": "DB 16",
+    "Draw [5  1/3']": "DB 5 1/3",
+    "Draw [8']": "DB 8",
+    "Draw [4']": "DB 4",
+    "Draw [2  2/3']": "DB 2 2/3",
+    "Draw [2']": "DB 2",
+    "Draw [1  3/5']": "DB 1 3/5",
+    "Draw [1  1/3']": "DB 1 1/3",
+    "Draw [1']": "DB 1",
+}
+
 COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
 
 class APIClient(object):
@@ -38,7 +50,10 @@ class APIClient(object):
         self.client_id = 0x3F
 
         self.populated = { command: False for command in COMMANDS }
+        self.populated['QUERY_CHAIN_CONTROLS'] = []
+        self.populated['QUERY_CHAIN_CONTROLS_ALL'] = False
         
+        self.chain_controls = {}
         self.logger = logging.getLogger("Midi IN")
         logging.basicConfig(level=logging.DEBUG)
         self.midiout = rtmidi.MidiOut()
@@ -47,7 +62,7 @@ class APIClient(object):
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if "Midi Through Port" in port:
+            if "Sysex API" in port:
                 self.port_num = i
                 break
         if self.port_num is None:
@@ -116,10 +131,41 @@ class APIClient(object):
         if self.count_chains:
             self.populated['QUERY_NUM_CHAINS'] = True
 
+    def send_QUERY_CHAIN_CONTROLS(self, channel):
+        command = COMMANDS['QUERY_CHAIN_CONTROLS']
+        self.send([command, self.client_id, self.txn_id, self.seq_id, channel])
+
+    def receive_QUERY_CHAIN_CONTROLS(self, message):
+        self.logger.warning("receive_QUERY_CHAIN_CONTROLS %s", message)
+        chain_channel = message[4]
+        chain_controls_response = self.bytes_to_dict(message[5:])
+        self.chain_controls[chain_channel] = {}
+        for k, v in chain_controls_response.items():
+            curval, minval, maxval, name = v.split(b":")
+            name = name.decode("UTF-8")
+            curval = int(curval)
+            minval = int(minval)
+            maxval = int(maxval)
+            self.chain_controls[chain_channel][name] = {
+                "cc": k,
+                "cur": curval,
+                "min": minval,
+                "max": maxval,
+            }
+        self.logger.warning("chain controls %s" % self.chain_controls.keys())
+        self.logger.warning("chain controls %s" % self.chain_controls)
+        if self.chain_controls[chain_channel]:
+            curr_val = self.populated.get('QUERY_CHAIN_CONTROLS', [])
+            curr_val.append(chain_channel)
+            self.populated['QUERY_CHAIN_CONTROLS'] = curr_val
+            if self.populated['QUERY_CHAIN_CHANNELS']:
+                if sorted(list(self.chain_controls.keys())) == sorted(self.chain_channels):
+                    self.populated['QUERY_CHAIN_CONTROLS_ALL'] = True
+
     def send_QUERY_CHAIN_CHANNELS(self):
         command = COMMANDS['QUERY_CHAIN_CHANNELS']
         self.send([command, self.client_id, self.txn_id, self.seq_id])
-        
+
     def receive_QUERY_CHAIN_CHANNELS(self, message):
         self.logger.warning("receive_QUERY_CHAIN_CHANNELS %s", message)
         self.chain_channels = message[4:]
@@ -130,7 +176,7 @@ class APIClient(object):
     def send_QUERY_CHAIN_ENGINES(self):
         command = COMMANDS['QUERY_CHAIN_ENGINES']
         self.send([command, self.client_id, self.txn_id, self.seq_id])
-            
+
     def bytes_to_dict(self, bytestring):
         out = {}
         while bytestring:
@@ -169,7 +215,7 @@ class ZynMCUController(object):
         logging.basicConfig(level=logging.DEBUG)
 
         self.client = APIClient()
-        patch = 'moog'
+        patch = b'Pianoteq'
         self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
         
         self.addr=liblo.Address('osc.udp://localhost:1370')
@@ -200,6 +246,18 @@ class ZynMCUController(object):
         msg=liblo.Message('/CUIA/LAYER_CONTROL', self.client.chain_channels[self.curr_instrument] + 1)
         liblo.send(self.addr, msg)
 
+    def send_control_change(self, control_name, value):
+        zyn_control_name = CONTROL_MAPPING.get(control_name)
+        if not zyn_control_name:
+            self.logger.warning("no control mapping found for control_name %s" % control_name)
+            return
+        try:
+            cc = self.client.chain_controls[2][zyn_control_name]["cc"]
+        except Exception as e:
+            self.logger.error("Failed to map control %s to zynthian control %s" % (control_name, zyn_control_name))
+            return
+        self.midiout.send_message([0xB0, cc, value])
+
     def get_current_instrument_channel(self):
         return self.client.chain_channels[self.curr_instrument]
     
@@ -212,14 +270,18 @@ class ZynMCUController(object):
         self.logger.warning(message)
         
     def poll_until_ready(self):
-        while not self.client.populated['HANDSHAKE'] and \
-              not self.client.populated['QUERY_NUM_CHAINS'] and \
-              not self.client.populated['QUERY_CHAIN_CHANNELS'] and \
-              not self.client.populated['QUERY_CHAIN_ENGINES']:
+        while not self.client.populated['HANDSHAKE'] or \
+              not self.client.populated['QUERY_NUM_CHAINS'] or \
+              not self.client.populated['QUERY_CHAIN_CHANNELS'] or \
+              not self.client.populated['QUERY_CHAIN_ENGINES'] or \
+              not self.client.populated['QUERY_CHAIN_CONTROLS_ALL']:
             self.client.send_HANDSHAKE()
             self.client.send_QUERY_NUM_CHAINS()
             self.client.send_QUERY_CHAIN_CHANNELS()
             self.client.send_QUERY_CHAIN_ENGINES()
+            if self.client.populated['QUERY_CHAIN_CHANNELS']:
+                for channel in self.client.chain_channels:
+                    self.client.send_QUERY_CHAIN_CONTROLS(channel)
             time.sleep(0.1)
         self.client.close()
         # now we're ready, do ready.
