@@ -311,7 +311,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.timer.cancel()
         def display_instrument():
             self.set_display_area("focus_name", ["Instrument:"])
-            self.set_display_area("focus_value", [self.current_instrument.decode("UTF-8")])
+            self.set_display_area("focus_value", [self.current_instrument])
             self.countdown_to_instrument(seconds=seconds)
         self.timer = threading.Timer(seconds, display_instrument)
         self.timer.start()
@@ -650,7 +650,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         if group_data["layout"] == "blank":
             self.set_mixer_mode()
         self.set_display_area("focus_name", ["Instrument:"])
-        self.set_display_area("focus_value", [self.current_instrument.decode("UTF-8")])
+        self.set_display_area("focus_value", [self.current_instrument])
         if not self.shift_mode:
             self.set_button_labels([group["name"] for group in self.groups])
             selected_group_name = self.groups[self.selected_group]["name"]
