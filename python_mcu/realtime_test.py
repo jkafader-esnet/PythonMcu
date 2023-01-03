@@ -204,7 +204,7 @@ class ZynMCUController(object):
         logging.basicConfig(level=logging.DEBUG)
 
         self.client = APIClient()
-        patch = b'Pianoteq'
+        patch = 'Pianoteq'
         self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
         
         self.addr=liblo.Address('osc.udp://localhost:1370')
