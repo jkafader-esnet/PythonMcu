@@ -27,7 +27,7 @@ control_mapping = {
         "Leslie Spin":     'rotary toggle',
         "Volume":          'volume',
         "Reverb":          'reverb',
-    }
+    },
     "Pianoteq": {
         "Volume": 'volume',
     },
@@ -58,7 +58,7 @@ control_mapping = {
         "Keyboard->Osc3": "Button Osc3",
         "Glide":          "Glide",
         "Volume":         "Volume",
-    }
+    },
 }
 
 patches = {
