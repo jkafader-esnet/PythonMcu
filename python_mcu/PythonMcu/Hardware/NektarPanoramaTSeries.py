@@ -459,7 +459,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                                  F7 (header)
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
         self.set_display_area('unknown', ['', '', ''])
-        self.countdown_to_instrument(seconds=3)
+        #self.countdown_to_instrument(seconds=3)
         self.render_display()
 
     def printable_hex(self, header, message):
