@@ -241,11 +241,11 @@ class ZynMCUController(object):
             self.logger.warning("no control mapping found for control_name '%s' for engine %s" % control_name, self.get_current_instrument_name())
             return
         try:
-            cc = self.client.chain_controls[2][zyn_control_name]["cc"]
+            cc = self.client.chain_controls[self.get_current_instrument_channel()][zyn_control_name]["cc"]
         except Exception as e:
             self.logger.error("Failed to map control '%s' to zynthian control '%s'" % (control_name, zyn_control_name))
             return
-        self.midiout.send_message([0xB0, cc, value])
+        self.midiout.send_message([0xB0 + self.get_current_instrument_channel(), cc, value])
 
     def get_current_instrument_channel(self):
         return self.client.chain_channels[self.curr_instrument]

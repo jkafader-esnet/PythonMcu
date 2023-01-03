@@ -341,6 +341,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 focus_name = control.get("long_name", control.get("name", ""))
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
+                self.controller.send_control_change(control.get("name"), 127 - control.get("value") if invert else control.get("value"))
             screen_position = control["current_screen_position"]
             self.set_vpot_value(screen_position, control["value"])
         return set
@@ -369,6 +370,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 focus_name = control.get("long_name", control.get("name", ""))
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
+                self.controller.send_control_change(control.get("name"), 127 - control.get("value") if invert else control.get("value"))
         return setter
 
     @staticmethod
