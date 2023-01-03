@@ -230,7 +230,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         pass
 
     def send_midi(self, message):
+        while self.locked:
+            time.sleep(0.005)
+        self.locked = True
         self.midiout.send_message(message)
+        self.locked = False
         if message[0] == 0xF0:
             time.sleep(0.005)
         
@@ -750,6 +754,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self._is_connected = False
         self.midiin.close_port()
         self.midiout.close_port()
+        if hasattr(self.timer, "cancel"):
+            self.timer.cancel()
         del self.midiin
         del self.midiout
         #MidiControllerTemplate.disconnect(self)
