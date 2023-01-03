@@ -236,8 +236,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.locked = True
         self.midiout.send_message(message)
         self.locked = False
+        time.sleep(0.0001)
         if message[0] == 0xF0:
-            time.sleep(0.005)
+            time.sleep(0.004)
         
     def set_shift_mode(self, mode):
         self.shift_mode = bool(mode)
