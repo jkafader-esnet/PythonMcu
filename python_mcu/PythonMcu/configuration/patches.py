@@ -1,5 +1,68 @@
+control_mapping = {
+    "B3 Organ": {
+        "Draw [16']":      'DB 16',
+        "Draw [5  1/3']":  'DB 5 1/3',
+        "Draw [8']":       'DB 8',
+        "Draw [4']":       'DB 4',
+        "Draw [2  2/3']":  'DB 2 2/3',
+        "Draw [2']":       'DB 2',
+        "Draw [1  3/5']":  'DB 1 3/5',
+        "Draw [1  1/3']":  'DB 1 1/3',
+        "Draw [1']":       'DB 1',
+        "Perc Decay":      'percussion decay',
+        "Perc Harmonic":   'percussion harmonic',
+        "Perc Volume":     'percussion volume',
+        "Pedal Spkr Func": 'rotary select',
+        "Rotary Speed":    'rotary speed',
+        "Character":       'overdrive character',
+        "Gain In":         'overdrive inputgain',
+        "GainOut":         'overdrive outputgain',
+        "Percussion":      'percussion',
+        "Overdrive":       'overdrive',
+        "Vibrato":         'vibrato upper',
+        "Vibrato 1":       'vibrato selector',
+        "Vibrato 2":       'vibrato selector',
+        "Chorus 1":        'vibrato selector',
+        "Chorus 2":        'vibrato selector',
+        "Leslie Spin":     'rotary toggle',
+        "Volume":          'volume',
+        "Reverb":          'reverb',
+    }
+    "Pianoteq": {
+        "Volume": 'volume',
+    },
+    "Minimoog": {
+        "Osc1 Octave":    "Range Osc1",
+        "Osc1 Shape":     "Waveform Osc1",
+        "Osc2 Octave":    "Range Osc2",
+        "Osc2 Fine":      "Osc tuning2",
+        "Osc2 Shape":     "Waveform Osc2",
+        "Osc3 Octave":    "Range Osc3",
+        "Osc3 Fine":      "Osc tuning3",
+        "Osc3 Shape":     "Waveform Osc3",
+        "VCA  Attack":    "Attack",
+        "VCA  Decay":     "Decay",
+        "VCA  Sustain":   "Sustain",
+        "VCA  Release":   "Release",
+        "VCF  Attack":    "Filter Attack",
+        "VCF  Decay":     "Filter Decay",
+        "VCF  Sustain":   "Filter Sustain",
+        "VCF  Release":   "Filter release",
+        "Cutoff":         "Cutoff",
+        "Resonance":      "Resonance",
+        "OSC1LVL":        "Volume 1",
+        "OSC2LVL":        "Volume 2",
+        "OSC3LVL":        "Volume 3",
+        "Keyboard->Osc1": "Button Osc1",
+        "Keyboard->Osc2": "Button Osc2",
+        "Keyboard->Osc3": "Button Osc3",
+        "Glide":          "Glide",
+        "Volume":         "Volume",
+    }
+}
+
 patches = {
-    b"Pianoteq": {
+    "Pianoteq": {
         "groups": [
             {"name": "NO",    "layout": "blank" }, 
             {"name": "CTRLS", "layout": "blank" },
@@ -13,31 +76,32 @@ patches = {
             {"name": "PLAY",  "layout": "blank" },
         ],
     },
-    b"B3 Organ": {
+
+    "B3 Organ": {
         # concept: "groups" allow us to specify which order and which layout per group
         "groups": [
-            {"name": "DRAW",    "layout": "track"}, 
-            {"name": "SOUND", "layout": "track"},
-            {"name": "",        "layout": "blank" },
-            {"name": "OVRDRV",     "layout": "pan" }
+            {"name": "DRAW",   "layout": "track"}, 
+            {"name": "SOUND",  "layout": "track"},
+            {"name": "",       "layout": "blank" },
+            {"name": "OVRDRV", "layout": "pan" }
         ],
         # concept: "shift" allows us to re-layout soft buttons when shift is held
         # concept: "shift" moves user to shift menu 1 if group menu 1 is active
         "shift": [
-            {"name": "DRAW2",   "layout": "track"}, 
-            {"name": "SOUND", "layout": "track"},
-            {"name": "",        "layout": "blank" },
-            {"name": "OVRDRV",     "layout": "pan" }
+            {"name": "DRAW2",  "layout": "track"}, 
+            {"name": "SOUND",  "layout": "track"},
+            {"name": "",       "layout": "blank" },
+            {"name": "OVRDRV", "layout": "pan" }
         ],
-        "F0": {"name": "Draw [16']",     "long_name": "16' Drawbar", "groups": ["DRAW"         ], "set": "vtrack_setter", "param": { "track": 0, "invert": True}, "value": 91 },
+        "F0": {"name": "Draw [16']",     "long_name": "16' Drawbar",    "groups": ["DRAW"         ], "set": "vtrack_setter", "param": { "track": 0, "invert": True}, "value": 91 },
         "F1": {"name": "Draw [5  1/3']", "long_name": "5 1/3' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 1, "invert": True}, "value": 91 },
-        "F2": {"name": "Draw [8']",      "long_name": "8' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 2, "invert": True}, "value": 91 },
-        "F3": {"name": "Draw [4']",      "long_name": "4' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 3, "invert": True}, "value": 91 },
+        "F2": {"name": "Draw [8']",      "long_name": "8' Drawbar",     "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 2, "invert": True}, "value": 91 },
+        "F3": {"name": "Draw [4']",      "long_name": "4' Drawbar",     "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 3, "invert": True}, "value": 91 },
         "F4": {"name": "Draw [2  2/3']", "long_name": "2 2/3' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 4, "invert": True}, "value": 91 },
-        "F5": {"name": "Draw [2']",      "long_name": "2' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 5, "invert": True}, "value": 91 },
+        "F5": {"name": "Draw [2']",      "long_name": "2' Drawbar",     "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 5, "invert": True}, "value": 91 },
         "F6": {"name": "Draw [1  3/5']", "long_name": "1 3/5' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 6, "invert": True}, "value": 91 },
         "F7": {"name": "Draw [1  1/3']", "long_name": "1 1/3' Drawbar", "groups": ["DRAW", "DRAW2"], "set": "vtrack_setter", "param": { "track": 7, "invert": True}, "value": 91 },
-        "F8": {"name": "Draw [1']",      "long_name": "1' Drawbar", "groups": [        "DRAW2"], "set": "vtrack_setter", "param": { "track": 8, "invert": True}, "value": 91 },
+        "F8": {"name": "Draw [1']",      "long_name": "1' Drawbar",     "groups": [        "DRAW2"], "set": "vtrack_setter", "param": { "track": 8, "invert": True}, "value": 91 },
         # pressing shift brings 1' into view
 
         "F9": {"name": "Perc Decay",       "groups": ["SOUND",], "set": "vtrack_setter", "param": { "track": 9, "invert": False }, "value": 91 },
@@ -45,6 +109,7 @@ patches = {
         "F11": {"name": "Perc Volume",     "groups": ["SOUND",], "set": "vtrack_setter", "param": { "track": 11, "invert": False }, "value": 91 },
         "F12": {"name": "Pedal Spkr Func", "groups": ["SOUND",], "set": "vtrack_setter", "param": { "track": 12, "invert": False }, "value": 91 },
         "F13": {"name": "Rotary Speed",    "groups": ["SOUND",], "set": "vtrack_setter", "param": { "track": 13, "invert": False }, "value": 91 },
+        "F14": {"name": "Reverb",          "groups": ["SOUND",], "set": "vtrack_setter", "param": { "track": 14, "invert": False }, "value": 91 },
 
         "P0": {"name": "Character", "long_name": "Ovrdrv Character", "groups": ["OVRDRV",], "set": "vpot_setter", "param": { "track": 0, }, "value": 91 },
         "P1": {"name": "Gain In",   "long_name": "Ovrdrv In Gain",   "groups": ["OVRDRV",], "set": "vpot_setter", "param": { "track": 1, }, "value": 91 },
@@ -59,7 +124,7 @@ patches = {
         "B6": {"name": "Chorus 2",      "groups": ["DRAW", "DRAW2", "SOUND", "OVRDRV"], "set": "vbutton_setter", "param": {"track": 6, "exclusive_with": [3, 4, 5] }, "value": 0 },
         "B7": {"name": "Leslie Spin",   "groups": ["DRAW", "DRAW2", "SOUND", "OVRDRV"], "set": "vbutton_setter", "param": {"track": 7}, "value": 0 },
     },
-    b"Minimoog": {
+    "Minimoog": {
         "groups": [
             {"name": "OSC", "layout": "track"}, 
             {"name": "ENV", "layout": "track"},
@@ -105,7 +170,7 @@ patches = {
         "B6": {"name": "A-440 Sync",       "groups": ["OSC", "ENV", "FLT"], "set": "vbutton_setter", "param": { "track": 6 }, "value": 127 },
         "B7": {"name": "Main Output",      "groups": ["OSC", "ENV", "FLT"], "set": "vbutton_setter", "param": { "track": 7 }, "value": 127 },
     },
-    b"Oberheim": {
+    "Oberheim": {
         "groups": [
             {"name": "OSC", "layout": "track"}, 
             {"name": "MOD", "layout": "track"},
@@ -186,7 +251,7 @@ patches = {
         "B22": {"name": "PW Mod Osc1",   "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 22}, "value": 127 },
         "B23": {"name": "PW Mod Osc2",   "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 23}, "value": 127 },
     },
-    b"Wurlitzer": {
+    "Wurlitzer": {
         "groups": [
             {"name": "", "layout": "blank" },
             {"name": "", "layout": "blank" },
@@ -203,7 +268,7 @@ patches = {
         "P1": {"name": "VibAmt",   "groups": "FX", "set": "vpot_setter", "param": { "track": 1 }, "value": 40 },
         "P2": {"name": "VibRate",  "groups": "FX", "set": "vpot_setter", "param": { "track": 2 }, "value": 40 },
     },
-    b"Solina": {
+    "Solina": {
         "groups": [
             { "name": "4'", "layout": "track" },
             { "name": "8'", "layout": "track" },
