@@ -106,6 +106,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.mode = "mixer"
         self.shift_mode = False
         self.timer = None
+        self.locked = False
         self.controls = {
             0: {"name": "Fader 1", "set": self.set_track_value(0) },
             1: {"name": "Fader 2", "set": self.set_track_value(1) },
