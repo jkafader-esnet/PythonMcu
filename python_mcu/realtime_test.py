@@ -1,4 +1,5 @@
 from PythonMcu.Hardware import NektarPanoramaTSeries
+from PythonMcu.configuration.patches import control_mapping
 import liblo
 
 import sys
@@ -19,18 +20,6 @@ COMMANDS = {
     
     'SAVE_CHAIN_PATCH': 0x70,
     'SET_CHAIN_PATCH': 0x71,
-}
-
-CONTROL_MAPPING = {
-    "Draw [16']": "DB 16",
-    "Draw [5  1/3']": "DB 5 1/3",
-    "Draw [8']": "DB 8",
-    "Draw [4']": "DB 4",
-    "Draw [2  2/3']": "DB 2 2/3",
-    "Draw [2']": "DB 2",
-    "Draw [1  3/5']": "DB 1 3/5",
-    "Draw [1  1/3']": "DB 1 1/3",
-    "Draw [1']": "DB 1",
 }
 
 COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
@@ -201,12 +190,12 @@ class APIClient(object):
         del self.midiout
 
 PRETTY_LOOKUP = {
-    b"PT": b"Pianoteq",
-    b"BF": b"B3 Organ",
-    b"LS": b"Wurlitzer",
-    b"JV/String machine": b"Solina",
-    b"JV/Obxd": b"Oberheim",
-    b"JV/Raffo Synth": b"Minimoog",
+    "PT": "Pianoteq",
+    "BF": "B3 Organ",
+    "LS": "Wurlitzer",
+    "JV/String machine": "Solina",
+    "JV/Obxd": "Oberheim",
+    "JV/Raffo Synth": "Minimoog",
 }
         
 class ZynMCUController(object):
@@ -247,14 +236,14 @@ class ZynMCUController(object):
         liblo.send(self.addr, msg)
 
     def send_control_change(self, control_name, value):
-        zyn_control_name = CONTROL_MAPPING.get(control_name)
+        zyn_control_name = control_mapping.get(self.get_current_instrument_name(), {}).get(control_name)
         if not zyn_control_name:
-            self.logger.warning("no control mapping found for control_name %s" % control_name)
+            self.logger.warning("no control mapping found for control_name '%s' for engine %s" % control_name, self.get_current_instrument_name())
             return
         try:
             cc = self.client.chain_controls[2][zyn_control_name]["cc"]
         except Exception as e:
-            self.logger.error("Failed to map control %s to zynthian control %s" % (control_name, zyn_control_name))
+            self.logger.error("Failed to map control '%s' to zynthian control '%s'" % (control_name, zyn_control_name))
             return
         self.midiout.send_message([0xB0, cc, value])
 
@@ -264,6 +253,7 @@ class ZynMCUController(object):
     def get_current_instrument_name(self):
         curr_instrument_channel = self.get_current_instrument_channel()
         chain_name = self.client.chain_engines[curr_instrument_channel]
+        chain_name = chain_name.decode("UTF-8")
         return PRETTY_LOOKUP.get(chain_name, chain_name)
         
     def log_wrapper(self, message, discard):
