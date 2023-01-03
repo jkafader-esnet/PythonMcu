@@ -204,7 +204,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if "PANORAMA T6 Internal" in port:
                 notes_port_num = i
                 break
-        print("intternal port: #%s" % notes_port_num)
+        print("internal port: #%s" % notes_port_num)
         self.notesin, self.notesin_port = open_midiinput(notes_port_num)
         self.notesin.set_callback(self.receive_midi)
         # original version. Commented with import above for reference.
@@ -278,7 +278,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def set_track_value(self, track_number):
         def set(value):
             keys = [k for k in self.visible_controls.keys()]
-            self._log("%s %s" % (len(keys), track_number))
             if track_number >= len(keys):
                 return
             track_name = keys[track_number]
@@ -815,7 +814,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def process_control(self, control, value):
         if control in self.controls:
-            print("Mapped control [%s]: %s" % (control, value))
             self.controls[control]["set"](value)
         else:
             print("Unmapped Control [%s]: %s" % (control, value))
