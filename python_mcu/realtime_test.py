@@ -238,7 +238,7 @@ class ZynMCUController(object):
     def send_control_change(self, control_name, value):
         zyn_control_name = control_mapping.get(self.get_current_instrument_name(), {}).get(control_name)
         if not zyn_control_name:
-            self.logger.warning("no control mapping found for control_name '%s' for engine %s" % control_name, self.get_current_instrument_name())
+            self.logger.warning("no control mapping found for control_name '%s' for engine %s" % (control_name, self.get_current_instrument_name()))
             return
         try:
             cc = self.client.chain_controls[self.get_current_instrument_channel()][zyn_control_name]["cc"]
@@ -257,11 +257,15 @@ class ZynMCUController(object):
         return PRETTY_LOOKUP.get(chain_name, chain_name)
 
     def get_mapped_instrument_controls(self):
-        curr_inst = self.get_current_instrument_name()
-        curr_chan = self.get_current_instrument_channel()
-        controls = self.client.chain_controls[curr_chan]
+        curr_inst = 'Pianoteq'
+        curr_chan = 0
+        zyn_controls = {}
+        if self.client.populated['QUERY_CHAIN_CONTROLS_ALL']:
+            curr_inst = self.get_current_instrument_name()
+            curr_chan = self.get_current_instrument_channel()
+            zyn_controls = self.client.chain_controls[curr_chan]
         output = {}
-        for zyn_control, local_control in control_mapping.get(curr_inst, {}):
+        for local_control, zyn_control in control_mapping.get(curr_inst, {}).items():
             output[local_control] = zyn_controls.get(zyn_control, {"cc": None, "min": 0, "max": 0, "cur": 0 })
         return output
         
