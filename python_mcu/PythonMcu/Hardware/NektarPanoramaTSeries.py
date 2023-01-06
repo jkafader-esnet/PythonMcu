@@ -250,6 +250,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         if value == 127 and self.shift_mode:
             self._log("doing full panic")
             self.disconnect()
+            self.midi_connect()
             self.controller.do_full_panic()
 
     def send_midi(self, message):
