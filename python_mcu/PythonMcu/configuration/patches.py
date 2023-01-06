@@ -104,6 +104,7 @@ control_mapping = {
         "Flt 4 Pole": 'FourPole',
         "Flt Env +/-": 'FenvInvert',
         "Flt Key Flw": 'FilterKeyFollow',
+        "Flt Warmth": 'Filter_Warm',
 
 
         "Osc1 Saw": 'Osc1Saw',
@@ -291,11 +292,11 @@ patches = {
         "P0": {"name": "Cutoff",      "groups": ["FLT"], "set": "vpot_setter", "param": {"track": 0 }, "value": 10 },
         "P1": {"name": "Resonance",   "groups": ["FLT"], "set": "vpot_setter", "param": {"track": 1 }, "value": 10 },
         "P2": {"name": "Flt Env Amt", "groups": ["FLT"], "set": "vpot_setter", "param": {"track": 2 }, "value": 10 },
-        "P3": {"name": "Flt Env Amt", "groups": ["FLT"], "set": "vpot_setter", "param": {"track": 3 }, "value": 10 },
 
         "B16": { "name": "Flt 4 Pole",  "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 16 }, "value": 127 },
         "B17": { "name": "Flt Env +/-", "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 17 }, "value": 127 },
         "B18": { "name": "Flt Key Flw", "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 18 }, "value": 127 },
+        "B19": { "name": "Flt Warmth",  "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 19 }, "value": 127 },
 
         "B0": {"name": "Osc1 Saw",   "groups": ["OSC",], "set": "vbutton_setter", "param": {"track": 0}, "value": 127 },
         "B1": {"name": "Osc1 Pulse", "groups": ["OSC",], "set": "vbutton_setter", "param": {"track": 1}, "value": 127 },
