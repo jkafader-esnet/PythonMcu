@@ -1,4 +1,7 @@
 control_mapping = {
+    "Wurlitzer": {
+	"Volume": 'volume',
+    },
     "B3 Organ": {
         "Draw [16']":      'DB 16',
         "Draw [5  1/3']":  'DB 5 1/3',

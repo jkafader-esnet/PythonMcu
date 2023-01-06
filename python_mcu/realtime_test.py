@@ -248,9 +248,11 @@ class ZynMCUController(object):
         self.midiout.send_message([0xB0 + self.get_current_instrument_channel(), cc, value])
 
     def send_midi_panic(self):
-        self.midiout.send_message([0xB0, 0x7B, 0x00])
+        self.midiout.send_message([0xBF, 0x78, 0x00])
+        self.midiout.send_message([0xBF, 0x7B, 0x00])
 
     def do_full_panic(self):
+        self.send_midi_panic()
         keys_to_delete = COMMANDS.keys()
         for key in keys_to_delete:
             if self.client.get(key):
