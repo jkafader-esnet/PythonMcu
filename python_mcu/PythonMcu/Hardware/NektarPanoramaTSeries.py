@@ -199,17 +199,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.midiin.ignore_types(sysex=False)
         self.midiin.set_callback(self.receive_midi)
 
-        for i in range(len(self.port_list)):
-            port = self.port_list[i]
-            if "PANORAMA T6 Internal" in port:
-                notes_port_num = i
-                break
-        print("internal port: #%s" % notes_port_num)
-        self.notesin, self.notesin_port = open_midiinput(notes_port_num)
-        self.notesin.set_callback(self.receive_midi)
-        # original version. Commented with import above for reference.
-        #self.midi = MidiConnection(callback_log, self.receive_midi)
-
     def setup_mappings(self):
         self.vcontrols = { name: ctrl for name, ctrl in patches[self.current_instrument].items() if name not in ["groups", "shift"] }
         self.groups = patches[self.current_instrument]["groups"]
@@ -233,10 +222,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def send_midi(self, message):
         while self.locked:
             time.sleep(0.005)
-        self.locked = True
         self.midiout.send_message(message)
-        self.locked = False
-        time.sleep(0.0001)
         if message[0] == 0xF0:
             time.sleep(0.004)
         
@@ -459,11 +445,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         # F0 00 01 77 7F 01                                  F7 (header)
         # F0 00 01 77 7F 01 06 00 01 01 00 00 02 00 00 03 00 F7
         self.set_display_area('unknown', ['', '', ''])
-        #self.countdown_to_instrument(seconds=3)
+        self.countdown_to_instrument(seconds=3)
         self.render_display()
 
-    def printable_hex(self, header, message):
-        return (" ".join([hex(b).replace("0x", '').zfill(2) for b in self.compose_full_message(header+message)])).upper()
+    def printable_hex(self, message):
+        return (" ".join([hex(b).replace("0x", '').zfill(2) for b in message])).upper()
 
     def compose_full_message(self, message):
         return bytes([0xF0]) + bytes(message) + bytes([0xF7])
@@ -759,7 +745,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.timer.cancel()
         del self.midiin
         del self.midiout
-        #MidiControllerTemplate.disconnect(self)
 
     def go_online(self):
         pass
@@ -831,106 +816,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.process_sysex(message=message)
         elif message[0] == 0xB0:
             self.process_control(control=message[1], value=message[2])
-        else:
-            self.controller.send_midi(message)
-        pass
-    #     if (message[0] == 0xF0) and (message[-1] == 0xF7):
-    #         if (message[1:4] == self.MIDI_MANUFACTURER_ID) and (message[4:10] == self.MIDI_DEVICE_ID):
-    #             sysex_message = message[10:-1]
-
-    #             if sysex_message == [1, 0]:
-    #                 self._leave_mcu_mode()
-
-    #                 self._mode_automap = True
-    #                 self._is_connected = False
-    #             elif sysex_message == [1, 1]:
-    #                 if self._mode_automap:
-    #                     self._mode_automap = False
-    #                     self._is_connected = True
-
-    #                     self._enter_mcu_mode()
-
-    #                     self._restore_previous_mode()
-    #                     self._restore_vpots()
-
-    #                     # force update of LCD
-    #                     self._lcd_strings = ['', '']
-    #                     self.update_lcd()
-
-    #         # all MIDI SysEx messages handled (including invalid
-    #         # ones), so quit processing here
-    #         return
-
-    #     if not self._is_connected:
-    #         return
-
-    #     cc_selector = {
-    #         self._MIDI_CC_FADERS: 'self.interconnector.move_fader_7bit(0, %d)',
-    #         self._MIDI_CC_FADERS + 1: 'self.interconnector.move_fader_7bit(1, %d)',
-    #         self._MIDI_CC_FADERS + 2: 'self.interconnector.move_fader_7bit(2, %d)',
-    #         self._MIDI_CC_FADERS + 3: 'self.interconnector.move_fader_7bit(3, %d)',
-    #         self._MIDI_CC_FADERS + 4: 'self.interconnector.move_fader_7bit(4, %d)',
-    #         self._MIDI_CC_FADERS + 5: 'self.interconnector.move_fader_7bit(5, %d)',
-    #         self._MIDI_CC_FADERS + 6: 'self.interconnector.move_fader_7bit(6, %d)',
-    #         self._MIDI_CC_FADERS + 7: 'self.interconnector.move_fader_7bit(7, %d)',
-    #         self._MIDI_CC_ENCODERS: 'self.interconnector.move_vpot_raw(0, %d)',
-    #         self._MIDI_CC_ENCODERS + 1: 'self.interconnector.move_vpot_raw(1, %d)',
-    #         self._MIDI_CC_ENCODERS + 2: 'self.interconnector.move_vpot_raw(2, %d)',
-    #         self._MIDI_CC_ENCODERS + 3: 'self.interconnector.move_vpot_raw(3, %d)',
-    #         self._MIDI_CC_ENCODERS + 4: 'self.interconnector.move_vpot_raw(4, %d)',
-    #         self._MIDI_CC_ENCODERS + 5: 'self.interconnector.move_vpot_raw(5, %d)',
-    #         self._MIDI_CC_ENCODERS + 6: 'self.interconnector.move_vpot_raw(6, %d)',
-    #         self._MIDI_CC_ENCODERS + 7: 'self.interconnector.move_vpot_raw(7, %d)',
-    #         self._MIDI_CC_CONTROL_PEDAL: 'self.on_control_pedal(%d & 0x01)',
-    #         self._MIDI_CC_BUTTON_BANK_UP: 'self._change_mode_edit(%d & 0x01)',
-    #         self._MIDI_CC_BUTTON_BANK_DOWN: 'self._change_mode_track(%d & 0x01)',
-    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM: 'self._change_mode_bank(%d & 0x01)',
-    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 1: 'self._change_mode_automation(%d & 0x01)',
-    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 2: 'self._change_mode_global_view(%d & 0x01)',
-    #         self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 3: 'self._change_mode_utility(%d & 0x01)',
-    #         self._MIDI_CC_BUTTON_MODE_TRANSPORT: 'self._change_mode_transport(%d & 0x01)',
-    #     }
-
-    #     # make sure that no submenu disturbs toggling the "Global
-    #     # View" mode
-    #     if self._mode_other == self._MODE_OTHER_GLOBAL_VIEW:
-    #         del cc_selector[self._MIDI_CC_BUTTONS_RIGHT_BOTTOM + 1]
-
-    #     if status == (MidiConnection.CONTROL_CHANGE + self._MIDI_DEVICE_CHANNEL):
-    #         cc_number = message[1]
-    #         cc_value = message[2]
-
-    #         if cc_number in cc_selector:
-    #             eval(cc_selector[cc_number] % cc_value)
-    #         elif cc_number == 0x6B:
-    #             # this controller change message is sent on entering
-    #             # and leaving "Automap" mode and can be probably
-    #             # ignored
-    #             pass
-    #         else:
-    #             internal_id = 'cc%d' % cc_number
-    #             status = cc_value & 0x01
-    #             key_processed = self.interconnector.keypress(internal_id, status)
-
-    #             if not key_processed:
-    #                 message_string = ['status %02X: ' % status]
-    #                 for byte in message:
-    #                     message_string.append('%02X' % byte)
-    #                 self._log(' '.join(message_string))
-    #     else:
-    #         message_string = ['status %02X: ' % status]
-    #         for byte in message:
-    #             message_string.append('%02X' % byte)
-    #         self._log(' '.join(message_string))
-
-    #def send_midi_control_change(self, channel=None, cc_number=None, cc_value=None):
-    #    if not self._is_connected:
-    #        return
-
-    #    if channel:
-    #        raise ValueError("The channel is fixed for this device!")
-
-    #    MidiControllerTemplate.send_midi_control_change(self, self._MIDI_DEVICE_CHANNEL, cc_number, cc_value)
+        # if it's not sysex, and not a control, discard.
+	pass
 
     @staticmethod
     def get_preferred_midi_input():
