@@ -180,17 +180,20 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self._is_connected = False
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
+        self.midi_output = midi_output
+        self.midi_connect()
 
+    def midi_connect(self):
         self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
-        callback_log("Available ports: %s" % self.port_list, '')
+        self._log("Available ports: %s" % self.port_list, '')
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if midi_output in port:
+            if self.midi_output in port:
                 self.port_num = i
                 break
-        print("the port number is %s" % self.port_num)
+        self._log("the port number is %s" % self.port_num)
         if self.port_num is None:
             sys.exit("couldn't find appropriate port")
         self.midiout.open_port(self.port_num)
@@ -240,7 +243,15 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def send_midi(self, message):
         while self.locked:
             time.sleep(0.005)
-        self.midiout.send_message(message)
+        self.locked = True
+        try:
+            self.midiout.send_message(message)
+        except Exception as e:
+            self._log("Caught exception %s: %s while doing midi_send. Trying reconnect..." % (type(e).__name__, e))
+            self.disconnect()
+            self.midi_connect()
+            self.connect()
+        self.locked = False
         if message[0] == 0xF0:
             time.sleep(0.004)
         
@@ -264,15 +275,23 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def set_rotary_value(self, track_number):
         def set(value):
-            func_name = self.vcontrols["P%s" % track_number]["set"]
-            parameters = self.vcontrols["P%s" % track_number]["param"]
+            keys = [k for k in self.visible_controls.keys()]
+            if track_number >= len(keys):
+                return
+            track_name = keys[track_number]
+            func_name = self.vcontrols[track_name]["set"]
+            parameters = self.vcontrols[track_name]["param"]
             getattr(self, func_name)(**parameters)(value)
         return set
 
     def toggle_button_value(self, track_number):
         def setter(value):
-            func_name = self.vcontrols["B%s" % track_number]["set"]
-            parameters = self.vcontrols["B%s" % track_number]["param"]
+            keys = [k for k in self.visible_buttons.keys()]
+            if track_number >= len(keys):
+                return
+            control_key = keys[track_number]
+            func_name = self.vcontrols[control_key]["set"]
+            parameters = self.vcontrols[control_key]["param"]
             if(value): # if this is button _press_ rather than _release_
                 # toggle the value
                 curval = self.vcontrols["B%s" % track_number]["value"]
