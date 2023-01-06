@@ -240,10 +240,14 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         return setter
 
     def master_fader_value(self, value):
-        self._log("change master fade here. Value should be %s" % value)
+        self.controller.send_control_change("Volume", value)
 
     def toggle_master_button(self, value):
-        self._log("send panic here when %s is 127. Be aware of shift value which is currently: %s" % (value, self.shift_mode))
+        if value == 127 and not self.shift_mode:
+            self.controller.send_midi_panic()
+        if value == 127 and self.shift_mode:
+            self.disconnect()
+            self.controller.do_full_panic()
 
     def send_midi(self, message):
         while self.locked:
