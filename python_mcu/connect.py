@@ -6,15 +6,15 @@ logger = logging.getLogger("PythonMcu")
 def log_wrapper(message, discard):
     logger.warning(message)
 
-patch = b"Pianoteq"
+patch = "Pianoteq"
 
 INSTRUMENTS = [
-    b"Pianoteq",
-    b"B3 Organ",
-    b"Minimoog",
-    b"Oberheim",
-    b"Wurlitzer",
-    b"Solina",
+    "Pianoteq",
+    "B3 Organ",
+    "Minimoog",
+    "Oberheim",
+    "Wurlitzer",
+    "Solina",
 ]
 
 class DummyController(object):
