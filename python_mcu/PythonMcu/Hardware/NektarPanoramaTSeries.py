@@ -108,6 +108,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.timer = None
         self.locked = False
         self.controls = {
+            14: {"name": "MASTER Fader", "set": self.master_fader_value },
+            97: {"name": "MASTER Button", "set": self.toggle_master_button },
+
             0: {"name": "Fader 1", "set": self.set_track_value(0) },
             1: {"name": "Fader 2", "set": self.set_track_value(1) },
             2: {"name": "Fader 3", "set": self.set_track_value(2) },
