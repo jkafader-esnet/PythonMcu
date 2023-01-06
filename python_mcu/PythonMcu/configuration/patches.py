@@ -59,6 +59,73 @@ control_mapping = {
         "Glide":          "Glide",
         "Volume":         "Volume",
     },
+    "Oberheim": {
+        "Osc1 Freq": 'Osc1Pitch',
+        "Osc1 Level": 'Osc1Mix',
+        "Osc2 Freq": 'Osc2Pitch',
+        "Osc2 Level": 'Osc2Mix',
+        "Detune": 'Oscillator2detune',
+        "Noise Level": 'NoiseMix',
+
+        "Pulse Width": 'PulseWidth',
+        "Voice Count": 'VoiceCount',
+
+        "LFO Rate": 'LfoFrequency',
+        "Freq Mod Amt": 'LfoAmount1',
+        "PW Mod Amt": 'LfoAmount2',
+
+        "Amp Attack": 'Attack',
+        "Amp Decay": 'Decay',
+        "Amp Sustain": 'Sustain',
+        "Amp Release": 'Release',
+        "Filt Attack": 'FilterAttack',
+        "Filt Decay": 'FilterDecay',
+        "Filt Sustain": 'FilterSustain',
+        "Filt Release": 'FilterRelease',
+
+        "PanVox1": 'Pan1',
+        "PanVox2": 'Pan2',
+        "PanVox3": 'Pan3',
+        "PanVox4": 'Pan4',
+        "PanVox5": 'Pan5',
+        "PanVox6": 'Pan6',
+        "PanVox7": 'Pan7',
+        "PanVox8": 'Pan8',
+
+        "Voice Detune": 'VoiceDetune',
+        "Filt Slop": 'FilterDetune',
+        "Glide Slop": 'PortamentoDetune',
+        "Env Slop": 'EnvelopeDetune',
+        "Osc Bright": 'Brightness',
+        "Pitch Env": 'EnvelopeToPitch',
+
+        "Cutoff": 'Cutoff',
+        "Resonance": 'Resonance',
+        "Flt Env Amt": 'FilterEnvAmount',
+        "Flt 4 Pole": 'FourPole',
+        "Flt Env +/-": 'FenvInvert',
+        "Flt Key Flw": 'FilterKeyFollow',
+
+
+        "Osc1 Saw": 'Osc1Saw',
+        "Osc1 Pulse": 'Osc1Pulse',
+        "Osc2 Saw": 'Osc2Saw',
+        "Osc2 Pulse": 'Osc2Pulse',
+
+        "Osc Sync": 'Osc2HardSync',
+        "Osc Step"
+        "Unison": 'Unison',
+        "Portamento": 'Portamento',
+
+        "LFO Sin": 'LfoSineWave',
+        "LFO Pulse": 'LfoSquareWave',
+        "LFO S&H": 'LfoSampleHoldWave',
+        "Freq Mod Osc1": 'LfoOsc1',
+        "Freq Mod Osc2": 'LfoOsc2',
+        "Freq Mod Filt": 'LfoFilter',
+        "PW Mod Osc1": 'LfoPw1',
+        "PW Mod Osc2": 'LfoPw2',
+    }
 }
 
 patches = {
@@ -190,6 +257,7 @@ patches = {
         "F3": {"name": "Osc2 Level",   "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 3 }, "value": 10 },
         "F4": {"name": "Detune",       "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 4 }, "value": 10 },
         "F5": {"name": "Pulse Width",  "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 5 }, "value": 10 },
+        "F6": {"name": "Noise Level",  "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 6 }, "value": 10 },
 
         "F8":  {"name": "LFO Rate",     "groups": ["MOD"], "set": "vtrack_setter", "param": {"track": 8 }, "value": 10 },
         "F9":  {"name": "Freq Mod Amt", "groups": ["MOD"], "set": "vtrack_setter", "param": {"track": 9 }, "value": 10 },
@@ -213,6 +281,7 @@ patches = {
         "P25":  {"name": "PanVox7",  "groups": ["VARY1",], "set": "vpot_setter", "param": {"track": 25 }, "value": 10 },
         "P26":  {"name": "PanVox8",  "groups": ["VARY1",], "set": "vpot_setter", "param": {"track": 26 }, "value": 10 },
 
+        "F27": {"name": "Voice Detune",  "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 27 }, "value": 10 },
         "F27": {"name": "Filt Slop",     "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 27 }, "value": 10 },
         "F28": {"name": "Glide Slop",    "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 28 }, "value": 10 },
         "F29": {"name": "Env Slop",      "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 29 }, "value": 10 },
@@ -224,6 +293,9 @@ patches = {
         "P2": {"name": "Flt Env Amt", "groups": ["FLT"], "set": "vpot_setter", "param": {"track": 2 }, "value": 10 },
         "P3": {"name": "Flt Env Amt", "groups": ["FLT"], "set": "vpot_setter", "param": {"track": 3 }, "value": 10 },
 
+        "B16": { "name": "Flt 4 Pole",  "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 16 }, "value": 127 },
+        "B17": { "name": "Flt Env +/-", "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 17 }, "value": 127 },
+        "B18": { "name": "Flt Key Flw", "groups": ["FLT"], "set": "vbutton_setter", "param": {"track": 18 }, "value": 127 },
 
         "B0": {"name": "Osc1 Saw",   "groups": ["OSC",], "set": "vbutton_setter", "param": {"track": 0}, "value": 127 },
         "B1": {"name": "Osc1 Pulse", "groups": ["OSC",], "set": "vbutton_setter", "param": {"track": 1}, "value": 127 },
@@ -233,23 +305,15 @@ patches = {
         "B5": {"name": "Osc Step",   "groups": ["OSC",], "set": "vbutton_setter", "param": {"track": 5}, "value": 127 },
         "B7": {"name": "Unison",     "groups": ["OSC",], "set": "vbutton_setter", "param": {"track": 7}, "value": 127 },
 
-        "B8":  {"name": "LFO Sin",       "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 8}, "value": 127 },
-        "B9":  {"name": "LFO Pulse",     "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 9}, "value": 127 },
-        "B10": {"name": "LFO S&H",       "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 10}, "value": 127 },
-        "B11": {"name": "Freq Mod Osc1", "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 11}, "value": 127 },
-        "B12": {"name": "Freq Mod Osc2", "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 12}, "value": 127 },
-        "B13": {"name": "Freq Mod Filt", "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 13}, "value": 127 },
-        "B14": {"name": "PW Mod Osc1",   "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 14}, "value": 127 },
-        "B15": {"name": "PW Mod Osc2",   "groups": ["MOD","VARY1"], "set": "vbutton_setter", "param": {"track": 15}, "value": 127 },
+        "B8":  {"name": "LFO Sin",       "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 8}, "value": 127 },
+        "B9":  {"name": "LFO Pulse",     "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 9}, "value": 127 },
+        "B10": {"name": "LFO S&H",       "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 10}, "value": 127 },
+        "B11": {"name": "Freq Mod Osc1", "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 11}, "value": 127 },
+        "B12": {"name": "Freq Mod Osc2", "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 12}, "value": 127 },
+        "B13": {"name": "Freq Mod Filt", "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 13}, "value": 127 },
+        "B14": {"name": "PW Mod Osc1",   "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 14}, "value": 127 },
+        "B15": {"name": "PW Mod Osc2",   "groups": ["MOD","ENV","VARY1","VARY2"], "set": "vbutton_setter", "param": {"track": 15}, "value": 127 },
 
-        "B16": {"name": "LFO Saw",       "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 16}, "value": 127 },
-        "B17": {"name": "LFO Pulse",     "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 17}, "value": 127 },
-        "B18": {"name": "LFO S&H",       "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 18}, "value": 127 },
-        "B19": {"name": "Freq Mod Osc1", "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 19}, "value": 127 },
-        "B20": {"name": "Freq Mod Osc2", "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 20}, "value": 127 },
-        "B21": {"name": "Freq Mod Filt", "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 21}, "value": 127 },
-        "B22": {"name": "PW Mod Osc1",   "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 22}, "value": 127 },
-        "B23": {"name": "PW Mod Osc2",   "groups": ["ENV","VARY2"], "set": "vbutton_setter", "param": {"track": 23}, "value": 127 },
     },
     "Wurlitzer": {
         "groups": [
