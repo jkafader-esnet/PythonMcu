@@ -243,7 +243,7 @@ class ZynMCUController(object):
         try:
             cc = self.client.chain_controls[self.get_current_instrument_channel()][zyn_control_name]["cc"]
         except Exception as e:
-            self.logger.error("Failed to map control '%s' to zynthian control '%s'" % (control_name, zyn_control_name))
+            self.logger.error("Failed to map control '%s' to zynthian control '%s', Exception: %s %s" % (control_name, zyn_control_name, type(e).__name__, e))
             return
         self.midiout.send_message([0xB0 + self.get_current_instrument_channel(), cc, value])
 
