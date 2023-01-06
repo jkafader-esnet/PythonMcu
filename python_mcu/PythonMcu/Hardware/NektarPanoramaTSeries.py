@@ -201,14 +201,23 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def setup_mappings(self):
         mapped_controls = self.controller.get_mapped_instrument_controls()
+        self._log("Mapped controls: %s" % mapped_controls)
         vcontrols = {}
         for name, ctrl in patches[self.current_instrument].items():
-            if name in not in ["groups", "shift"]:
+            if name not in ["groups", "shift"]:
                 vcontrols[name] = ctrl
-                if mapped_controls[name]['cc'] is None: # cc of None indicates "no mapping." Log.
-                    self._log("No mapping found for control %s" % name)
+                if mapped_controls.get(ctrl['name'], {}).get('cc') is None: # cc of None indicates "no mapping." Log.
+                    self._log("No mapping found for control %s" % ctrl['name'])
                 else:
-                    vcontrols[name]["value"] = mapped_controls["name"]["value"]
+                    curval = mapped_controls[ctrl['name']]["cur"]
+                    if vcontrols[name].get("param", {}).get("invert"):
+                        curval = 127 - curval
+                    if curval <= 0:
+                        curval = 0
+                    if curval >= 127:
+                        curval = 127
+                    self._log("setting value for control %s to %s" % (ctrl['name'], curval))
+                    vcontrols[name]["value"] = curval
         self.vcontrols = vcontrols
         self.groups = patches[self.current_instrument]["groups"]
         self.shift = patches[self.current_instrument]["shift"]
@@ -312,6 +321,13 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         def display_instrument():
             self.set_display_area("focus_name", ["Instrument:"])
             self.set_display_area("focus_value", [self.current_instrument])
+            # correct the values for CC 1 and 2 while we're at it -- they get weird
+            #control_keys = [k for k in self.visible_controls.keys()][0:2]
+            #for key in control_keys:
+            #    value = self.visible_controls[key]["value"]
+            #    setter = self.resolve_track_setter(self.visible_controls[key]['set'])
+            #    set_track = setter(**self.visible_controls[key]["param"])
+            #    set_track(value, invert=False, changed=False)
             self.countdown_to_instrument(seconds=seconds)
         self.timer = threading.Timer(seconds, display_instrument)
         self.timer.start()
@@ -331,7 +347,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 delta = -1 * delta
             if delta not in [6, 4, 1, -1, -4, -6]:
                 delta = 0
-            self._log("Delta = %s" % delta)
             if changed:
                 control["value"] += delta
                 if control["value"] <= 0:
@@ -826,7 +841,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         elif message[0] == 0xB0:
             self.process_control(control=message[1], value=message[2])
         # if it's not sysex, and not a control, discard.
-	pass
+        pass
 
     @staticmethod
     def get_preferred_midi_input():
