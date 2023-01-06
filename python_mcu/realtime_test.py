@@ -245,7 +245,7 @@ class ZynMCUController(object):
         except Exception as e:
             self.logger.error("Failed to map control '%s' to zynthian control '%s', Exception: %s %s" % (control_name, zyn_control_name, type(e).__name__, e))
             return
-        self.midiout.send_message([0xB0 + self.get_current_instrument_channel(), cc, value])
+        self.midiout.send_message([0xB1, cc, value]) # currently, always channel 2. Channel 1 is ignored by configuration
 
     def send_midi_panic(self):
         self.midiout.send_message([0xBF, 0x78, 0x00])
@@ -253,10 +253,7 @@ class ZynMCUController(object):
 
     def do_full_panic(self):
         self.send_midi_panic()
-        keys_to_delete = COMMANDS.keys()
-        for key in keys_to_delete:
-            if self.client.get(key):
-                del self.client[key]
+        self.client = APIClient()
         self.poll_until_ready()
 
     def get_current_instrument_channel(self):
