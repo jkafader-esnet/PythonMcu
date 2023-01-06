@@ -295,6 +295,7 @@ class ZynMCUController(object):
                 for channel in self.client.chain_channels:
                     self.client.send_QUERY_CHAIN_CONTROLS(channel)
             time.sleep(0.1)
+            self.logger.warning("looping...")
         self.client.close()
         # now we're ready, do ready.
         self.ready()
