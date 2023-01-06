@@ -255,6 +255,15 @@ class ZynMCUController(object):
         chain_name = self.client.chain_engines[curr_instrument_channel]
         chain_name = chain_name.decode("UTF-8")
         return PRETTY_LOOKUP.get(chain_name, chain_name)
+
+    def get_mapped_instrument_controls(self):
+        curr_inst = self.get_current_instrument_name()
+        curr_chan = self.get_current_instrument_channel()
+        controls = self.client.chain_controls[curr_chan]
+        output = {}
+        for zyn_control, local_control in control_mapping.get(curr_inst, {}):
+            output[local_control] = zyn_controls.get(zyn_control, {"cc": None, "min": 0, "max": 0, "cur": 0 })
+        return output
         
     def log_wrapper(self, message, discard):
         self.logger.warning(message)

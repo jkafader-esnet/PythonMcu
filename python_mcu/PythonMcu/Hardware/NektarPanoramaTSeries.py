@@ -200,7 +200,16 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.midiin.set_callback(self.receive_midi)
 
     def setup_mappings(self):
-        self.vcontrols = { name: ctrl for name, ctrl in patches[self.current_instrument].items() if name not in ["groups", "shift"] }
+        mapped_controls = self.controller.get_mapped_instrument_controls()
+        vcontrols = {}
+        for name, ctrl in patches[self.current_instrument].items():
+            if name in not in ["groups", "shift"]:
+                vcontrols[name] = ctrl
+                if mapped_controls[name]['cc'] is None: # cc of None indicates "no mapping." Log.
+                    self._log("No mapping found for control %s" % name)
+                else:
+                    vcontrols[name]["value"] = mapped_controls["name"]["value"]
+        self.vcontrols = vcontrols
         self.groups = patches[self.current_instrument]["groups"]
         self.shift = patches[self.current_instrument]["shift"]
         self.selected_group = 0
