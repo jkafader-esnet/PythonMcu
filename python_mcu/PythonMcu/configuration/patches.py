@@ -66,7 +66,6 @@ control_mapping = {
         "Osc2 Level": 'Osc2Mix',
         "Detune": 'Oscillator2detune',
         "Noise Level": 'NoiseMix',
-
         "Pulse Width": 'PulseWidth',
         "Voice Count": 'VoiceCount',
 
@@ -113,7 +112,7 @@ control_mapping = {
         "Osc2 Pulse": 'Osc2Pulse',
 
         "Osc Sync": 'Osc2HardSync',
-        "Osc Step"
+        "Osc Step": None,
         "Unison": 'Unison',
         "Portamento": 'Portamento',
 
@@ -258,6 +257,7 @@ patches = {
         "F4": {"name": "Detune",       "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 4 }, "value": 10 },
         "F5": {"name": "Pulse Width",  "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 5 }, "value": 10 },
         "F6": {"name": "Noise Level",  "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 6 }, "value": 10 },
+        "F7": {"name": "Voice Count",  "groups": ["OSC",], "set": "vtrack_setter", "param": {"track": 7 }, "value": 10 },
 
         "F8":  {"name": "LFO Rate",     "groups": ["MOD"], "set": "vtrack_setter", "param": {"track": 8 }, "value": 10 },
         "F9":  {"name": "Freq Mod Amt", "groups": ["MOD"], "set": "vtrack_setter", "param": {"track": 9 }, "value": 10 },
@@ -281,7 +281,7 @@ patches = {
         "P25":  {"name": "PanVox7",  "groups": ["VARY1",], "set": "vpot_setter", "param": {"track": 25 }, "value": 10 },
         "P26":  {"name": "PanVox8",  "groups": ["VARY1",], "set": "vpot_setter", "param": {"track": 26 }, "value": 10 },
 
-        "F27": {"name": "Voice Detune",  "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 27 }, "value": 10 },
+        "F26": {"name": "Voice Detune",  "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 26 }, "value": 10 },
         "F27": {"name": "Filt Slop",     "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 27 }, "value": 10 },
         "F28": {"name": "Glide Slop",    "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 28 }, "value": 10 },
         "F29": {"name": "Env Slop",      "groups": ["VARY2",], "set": "vtrack_setter", "param": {"track": 29 }, "value": 10 },
