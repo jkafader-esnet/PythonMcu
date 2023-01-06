@@ -138,7 +138,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             22: { "name": "Track 7 Button", "set": self.toggle_button_value(6) },
             23: { "name": "Track 8 Button", "set": self.toggle_button_value(7) },
 
-            94: { "name": "Track Master Button", "set": self.panic },
             96: { "name": "Shift", "set": self.set_shift_mode },
 
             80: { "name": "Transport: Loop", "set": self.unmapped },
@@ -240,8 +239,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 self.render_display()
         return setter
 
-    def panic(self):
-        pass
+    def master_fader_value(self, value):
+        self._log("change master fade here. Value should be %s" % value)
+
+    def toggle_master_button(self, value):
+        self._log("send panic here when %s is 127. Be aware of shift value which is currently: %s" % (value, self.shift_mode))
 
     def send_midi(self, message):
         while self.locked:
