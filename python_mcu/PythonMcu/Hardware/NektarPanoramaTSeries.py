@@ -340,9 +340,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 value = 127 - value
             track_name = "F%s" % track
             control = self.visible_controls[track_name]
-            control["value"] = value
             screen_position = control["current_screen_position"]
-            control.get("has_latched"):
+            if control.get("has_latched") or not changed:
+                control["value"] = value
                 self.set_vtrack_value(screen_position, value)
 
             focus_name = control.get("long_name", control.get("name", ""))
@@ -351,7 +351,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 if not control.get("has_latched"):
                     if(value < control.get("value")):
                         self.set_display_area("focus_value", ["- UP -"])
-                    if(value < control.get("value")):
+                    if(value > control.get("value")):
                         self.set_display_area("focus_value", ["- DOWN -"])
                     if(value == control.get("value")):
                         control["has_latched"] = True
