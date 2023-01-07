@@ -180,10 +180,17 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self._mode_other = self._MODE_OTHER_OFF
         self._mode_automap = False
 
-        self._is_connected = False
+        self.is_midi_connected = False
+        self.is_mcu_connected = False
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
         self.midi_output = midi_output
         self.midi_connect()
+
+    def try_connection(self):
+        try:
+            self.midi_connect()
+        except Exception as e:
+            self._log("Received exception trying connect: %s" % e)
 
     def midi_connect(self):
         self.midiout = rtmidi.MidiOut()
@@ -197,12 +204,13 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 break
         self._log("the port number is %s" % self.port_num)
         if self.port_num is None:
-            sys.exit("couldn't find appropriate port")
+            raise Exception("Desired port not available")
         self.midiout.open_port(self.port_num)
 
         self.midiin, self.port_name = open_midiinput(self.port_num)
         self.midiin.ignore_types(sysex=False)
         self.midiin.set_callback(self.receive_midi)
+        self.is_midi_connected = True
 
     def setup_mappings(self):
         mapped_controls = self.controller.get_mapped_instrument_controls()
@@ -779,7 +787,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     # --- initialisation ---
     def connect(self):
         #MidiControllerTemplate.connect(self)
-        self._is_connected = True
 
         #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialising...')
         #self.set_lcd_directly(1, 'Mackie Host Control:    connecting...')
@@ -790,8 +797,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self._mode_track = self._MODE_TRACK_MUTE_SOLO
         #self._restore_previous_mode()
 
-       # self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
-
+        # self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
+        self.is_mcu_connected = True
         self._log('Connected.', True)
 
     def disconnect(self):
@@ -803,10 +810,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self.set_lcd_directly(1, '')
 
         self._leave_mcu_mode()
+        self.is_mcu_connected = False
 
-        self._is_connected = False
         self.midiin.close_port()
         self.midiout.close_port()
+        self.is_midi_connected = False
         if hasattr(self.timer, "cancel"):
             self.timer.cancel()
         del self.midiin
@@ -952,7 +960,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         line 0: top row
         line 1: bottom row
         """
-        if not self._is_connected:
+        if not self.is_connected:
             return
 
         assert len(hex_codes) == 72

@@ -78,7 +78,11 @@ class APIClient(object):
         print(self.format_hex(message, h=True))
         self.midiout.send_message(message)
         self.txn_id += 1
+        if self.txn_id > 127:
+            self.txn_id = 0
         self.seq_id += 1
+        if self.seq_id > 127:
+            self.seq_id = 0
 
     def send_midi(self, message):
         self.midiout.send_message(message)
@@ -203,7 +207,6 @@ class ZynMCUController(object):
         self.logger = logging.getLogger("ZynMCUController")
         logging.basicConfig(level=logging.DEBUG)
 
-        self.client = APIClient()
         patch = 'Pianoteq'
         self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
         
@@ -253,8 +256,7 @@ class ZynMCUController(object):
 
     def do_full_panic(self):
         self.send_midi_panic()
-        self.client = APIClient()
-        self.poll_until_ready()
+        self.poll_api_until_ready()
 
     def get_current_instrument_channel(self):
         return self.client.chain_channels[self.curr_instrument]
@@ -280,20 +282,34 @@ class ZynMCUController(object):
         
     def log_wrapper(self, message, discard):
         self.logger.warning(message)
-        
-    def poll_until_ready(self):
+    
+    def await_hardware(self):
+        while not self.hardware.is_midi_connected:
+            self.logger.warning("Awaiting hardware connection...")
+            self.hardware.try_connection()
+            time.sleep(0.5)
+        self.poll_api_until_ready()
+
+
+    def poll_api_until_ready(self):
+        self.client = APIClient()
         while not self.client.populated['HANDSHAKE'] or \
               not self.client.populated['QUERY_NUM_CHAINS'] or \
               not self.client.populated['QUERY_CHAIN_CHANNELS'] or \
               not self.client.populated['QUERY_CHAIN_ENGINES'] or \
               not self.client.populated['QUERY_CHAIN_CONTROLS_ALL']:
-            self.client.send_HANDSHAKE()
-            self.client.send_QUERY_NUM_CHAINS()
-            self.client.send_QUERY_CHAIN_CHANNELS()
-            self.client.send_QUERY_CHAIN_ENGINES()
+            if not self.client.populated['HANDSHAKE']:
+                self.client.send_HANDSHAKE()
+            if not self.client.populated['QUERY_NUM_CHAINS']:
+                self.client.send_QUERY_NUM_CHAINS()
+            if not self.client.populated['QUERY_CHAIN_CHANNELS']:
+                self.client.send_QUERY_CHAIN_CHANNELS()
+            if not self.client.populated['QUERY_CHAIN_ENGINES']:
+                self.client.send_QUERY_CHAIN_ENGINES()
             if self.client.populated['QUERY_CHAIN_CHANNELS']:
-                for channel in self.client.chain_channels:
-                    self.client.send_QUERY_CHAIN_CONTROLS(channel)
+                if not self.client.populated['QUERY_CHAIN_CONTROLS_ALL']:
+                    for channel in self.client.chain_channels:
+                        self.client.send_QUERY_CHAIN_CONTROLS(channel)
             time.sleep(0.1)
             self.logger.warning("looping...")
         self.client.close()
@@ -301,14 +317,18 @@ class ZynMCUController(object):
         self.ready()
 
     def ready(self):
-        print('looks like we are ready...')
+        self.logger.warning('looks like we are ready...')
         self.hardware.connect()
+        while hardware.is_midi_connected:
+            time.sleep(5)
+            self.logger.warning('Check complete, still connected.')
+        self.await_hardware()
         
     def disconnect(self):
         self.hardware.disconnect()
         
 controller = ZynMCUController()    
-controller.poll_until_ready()
+controller.await_hardware()
 
 try:
     while True:
