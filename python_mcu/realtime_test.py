@@ -6,7 +6,6 @@ import liblo
 import sys
 import rtmidi
 from rtmidi.midiutil import open_midiinput
-import sys
 import logging
 import time
 
@@ -29,7 +28,7 @@ ALL_RESOLVED = 2
 
 COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
 
-logging.getLogger("MCU Controller")
+logger = logging.getLogger("MCU Controller")
 logging.basicConfig(level=logging.DEBUG)
 
 class TimeoutException(Exception):
@@ -80,7 +79,9 @@ class APIClient(object):
         self.logger.info("connected to port %s", self.port_name)
         self.midi_state = MIDI_CONNECTED
 
-    def midi_disconnect():
+    def midi_disconnect(self):
+        if self.midi_state == MIDI_DISCONNECTED:
+            return
         self.midi_state = MIDI_DISCONNECTING
         self.midiin.close_port()
         self.midiout.close_port()
@@ -143,13 +144,13 @@ class APIClient(object):
     def wait_on_item(self, command, timeout=1, item=None):
         total = 0
         wait = 0.005
-        while self.populated[command].indexOf(item) < 0 and total < timeout:
+        while item not in self.populated[command] and total < timeout:
             total += wait
             time.sleep(wait)
         if total >= timeout:
             raise TimeoutException("query %s timed out")
 
-    def do_HANDSHAKE(self):
+    def send_HANDSHAKE(self):
         command = COMMANDS['HANDSHAKE']
         self.send([command, self.client_id, self.txn_id, self.seq_id])
 
@@ -271,12 +272,11 @@ PRETTY_LOOKUP = {
         
 class ZynMCUController(object):
     def __init__(self):
-        self.logger = logging.getLogger("ZynMCUController")
+        self.logger = logger
         logging.basicConfig(level=logging.DEBUG)
 
         patch = 'Pianoteq'
         self.client = None
-        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", patch, controller=self)
         
         self.addr=liblo.Address('osc.udp://localhost:1370')
         self.curr_instrument = 0
@@ -364,34 +364,43 @@ class ZynMCUController(object):
         ]
         try:
             while True:
-                if self.hardware.state == MIDI_DISCONNECTED:
+                if self.hardware.midi_state == MIDI_DISCONNECTED:
                     self.logger.info("Our hardware is not connected. Doing MIDI connect...")
                     self.hardware.midi_connect()
-                if self.hardware.state == MIDI_CONNECTED:
+                if self.hardware.midi_state == MIDI_CONNECTED:
                     self.logger.info("Our hardware is not MCU connected. Doing MCU connect...")
                     self.hardware.mcu_connect()
+                if not self.client:
+                    self.client = APIClient()
                 if not self.client.query_state == ALL_RESOLVED:
-                    if self.client.midi_state == DISCONNECTED:
+                    if self.client.midi_state == MIDI_DISCONNECTED:
                         self.logger.info("Our client is not resolved and not connected. Doing MIDI connect...")
                         self.client.midi_connect()
-                    if self.client.midi_state == CONNECTED:
+                    if self.client.midi_state == MIDI_CONNECTED:
                         self.logger.info("Our client is connected but not resolved. Doing queries...")
                         if all([self.client.populated.get(key) for key in client_queries_to_resolve]):
+                            self.logger.info("All queries appear to be resolved...")
                             self.client.query_state = ALL_RESOLVED
                         for method in client_methods:
+                            self.logger.info("Doing %s...", method)
                             getattr(self.client, method)()
                 if self.client.query_state == ALL_RESOLVED:
-                    self.logger.info("Our client is fully resolved. Closing MIDI connection...")
-                    self.client.midi_disconnect() # don't tie up the connection
+                    if self.client.midi_state != MIDI_DISCONNECTED:
+                        self.logger.info("Our client is fully resolved. Closing MIDI connection...")
+                        self.client.midi_disconnect() # don't tie up the connection
                 time.sleep(0.5)
+                self.logger.debug('looping...')
         except KeyboardInterrupt:
             print("Interrupted!")
+        except Exception as e:
+            print("%s %s" % (type(e).__name__, e))
+            raise e
         finally:
-            controller.disconnect()
-            if hasattr(controller.hardware.timer, "cancel"):
-                controller.hardware.timer.cancel()
             print("Exiting...")
-            sys.exit()
+            try:
+                self.hardware.disconnect()
+            finally:
+                sys.exit()
 
 controller = ZynMCUController()
 controller.run_forever()
