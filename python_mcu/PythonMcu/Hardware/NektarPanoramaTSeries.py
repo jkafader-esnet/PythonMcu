@@ -664,11 +664,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.midi_state == MCU_DISCONNECTING
         if self.midi_state == MIDI_CONNECTED:
             self.midi_state == MIDI_DISCONNECTING
-        self._log('Disconnecting...', True)
+        self._log('Disconnecting...')
 
         self._leave_mcu_mode()
-        self.midi_state = MCU_DISCONNECTED
-        self._log('MCU Disconnected.', True)
+        self._log('MCU Disconnected.')
         self.midi_state = MIDI_DISCONNECTING
 
         self.midiin.close_port()
@@ -679,7 +678,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         del self.midiin
         del self.midiout
         self.midi_state = MIDI_DISCONNECTED
-        self._log('MIDI Disconnected.', True)
+        self._log('MIDI Disconnected.')
 
     def send_handshake(self):
         # F0 7E 7F 06 01 F7
@@ -698,14 +697,14 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def _enter_mcu_mode(self):
         self.midi_state = MCU_CONNECTING
-        self._log('Entering "MCU" mode...', True)
+        self._log('Entering "MCU" mode...')
 
         self.send_handshake()
 
     def _leave_mcu_mode(self):
         if self.midi_state == MCU_CONNECTED:
             self.midi_state = MCU_DISCONNECTING
-        self._log('Leaving "MCU" mode...', True)
+        self._log('Leaving "MCU" mode...')
 
         self.send_disconnect()
 
