@@ -208,7 +208,7 @@ class ZynMCUController(object):
         logging.basicConfig(level=logging.DEBUG)
 
         patch = 'Pianoteq'
-        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
+        self.client = None
         
         self.addr=liblo.Address('osc.udp://localhost:1370')
         self.curr_instrument = 0
@@ -225,6 +225,7 @@ class ZynMCUController(object):
         if self.port_num is None:
             sys.exit("couldn't find appropriate port")
         self.midiout.open_port(self.port_num)
+        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
 
     def send_midi(self, message):
         self.midiout.send_message(message)
@@ -268,6 +269,8 @@ class ZynMCUController(object):
         return PRETTY_LOOKUP.get(chain_name, chain_name)
 
     def get_mapped_instrument_controls(self):
+        if not self.client:
+            return {}
         curr_inst = 'Pianoteq'
         curr_chan = 0
         zyn_controls = {}
@@ -282,7 +285,10 @@ class ZynMCUController(object):
         
     def log_wrapper(self, message, discard):
         self.logger.warning(message)
-    
+
+    def start(self):
+        self.await_hardware()
+        
     def await_hardware(self):
         while not self.hardware.is_midi_connected:
             self.logger.warning("Awaiting hardware connection...")
@@ -312,31 +318,35 @@ class ZynMCUController(object):
                         self.client.send_QUERY_CHAIN_CONTROLS(channel)
             time.sleep(0.1)
             self.logger.warning("looping...")
+        self.logger.warning("exited loop...")
         self.client.close()
-        # now we're ready, do ready.
+        self.logger.warning("client is closed")
+        # Now we're ready, do ready.
         self.ready()
 
     def ready(self):
         self.logger.warning('looks like we are ready...')
         self.hardware.connect()
-        while hardware.is_midi_connected:
-            time.sleep(5)
-            self.logger.warning('Check complete, still connected.')
-        self.await_hardware()
         
     def disconnect(self):
         self.hardware.disconnect()
         
-controller = ZynMCUController()    
-controller.await_hardware()
 
 try:
+    controller = ZynMCUController()
     while True:
+        controller.await_hardware()
+        while controller.hardware.is_midi_connected:
+            controller.hardware.check_connection()
+            controller.logger.warning('Check complete, still connected.')
+            time.sleep(5)
         time.sleep(1)
 except KeyboardInterrupt:
-    print("")
+    print("Interrupted")
 finally:
     controller.disconnect()
+    if hasattr(controller.hardware.timer, "cancel"):
+        controller.hardware.timer.cancel()
     print("Exiting...")
     sys.exit()
 

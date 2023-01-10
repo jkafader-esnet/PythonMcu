@@ -38,6 +38,8 @@ import rtmidi
 from rtmidi.midiutil import open_midiinput
 import threading
 
+class ConnectionNotAvailable(Exception):
+    pass
 
 class NektarPanoramaTSeries(MidiControllerTemplate):
     FORMATTED_NAME = "Nektar Panorama T4/T6"
@@ -107,6 +109,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.shift_mode = False
         self.timer = None
         self.locked = False
+        self.handshake_received = False
         self.controls = {
             14: {"name": "MASTER Fader", "set": self.master_fader_value },
             97: {"name": "MASTER Button", "set": self.toggle_master_button },
@@ -184,13 +187,29 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.is_mcu_connected = False
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
         self.midi_output = midi_output
-        self.midi_connect()
+        self.try_connection()
 
     def try_connection(self):
         try:
             self.midi_connect()
-        except Exception as e:
+        except ConnectionNotAvailable as e:
             self._log("Received exception trying connect: %s" % e)
+
+    def check_connection(self):
+        if not hasattr(self, "midiout"):
+            self.is_midi_connected = False
+            return
+        self.port_list = self.midiout.get_ports()
+        self._log("port list is %s" % self.port_list)
+        self.port_num = None
+        for i in range(len(self.port_list)):
+            port = self.port_list[i]
+            if self.midi_output in port and "RtMidiIn Client" not in port:
+                self.port_num = i
+                break
+        self._log("port num is %s" % self.port_num)
+        if self.port_num is None:
+            self.disconnect()
 
     def midi_connect(self):
         self.midiout = rtmidi.MidiOut()
@@ -199,12 +218,12 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if self.midi_output in port:
+            if self.midi_output in port and "RtMidiIn Client" not in port:
                 self.port_num = i
                 break
         self._log("the port number is %s" % self.port_num)
         if self.port_num is None:
-            raise Exception("Desired port not available")
+            raise ConnectionNotAvailable("Desired port not available")
         self.midiout.open_port(self.port_num)
 
         self.midiin, self.port_name = open_midiinput(self.port_num)
@@ -811,7 +830,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self._leave_mcu_mode()
         self.is_mcu_connected = False
-
+        self.handshake_received = False
         self.midiin.close_port()
         self.midiout.close_port()
         self.is_midi_connected = False
@@ -834,13 +853,21 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         #self.set_lcd_directly(0, 'Nektar Panorama T6:  initialised.')
         #self.set_lcd_directly(1, 'Mackie Host Control:    offline.')
 
-    def send_handshake(self):
+    def do_handshake(self):
         # F0 7E 7F 06 01 F7
 
         header = [0xF0, 0x7E, 0x7F]
         data = [0x06, 0x01]
-
         self.send_midi(header + data + [0xF7])
+        timeout = 2.0
+        total_time = 0
+        while total_time < timeout and not self.handshake_received:
+            self._log("waiting for handshake")
+            time.sleep(0.1)
+            total_time += 0.1
+        if not self.handshake_received:
+            return False
+        return True
         #self.midi.send_sysex(header, data)
 
     def send_disconnect(self):
@@ -854,7 +881,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def _enter_mcu_mode(self):
         self._log('Entering "MCU" mode...', True)
 
-        self.send_handshake()
+        while not self.do_handshake():
+            time.sleep(0.1)
+            self._log("sending handshake")
         self.initialize_controls()
 
         # probably some other stuff to do here, but not this...
@@ -880,8 +909,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         pass
 
     def process_sysex(self, message):
-        print("process_sysex", message)
-        pass
+        self._log("%s" % message)
+        if message == [240, 126, 127, 6, 2, 0, 1, 119, 103, 72, 66, 64, 48, 49, 48, 54, 247]:
+            self.handshake_received = True
+        pass # no further action
 
     # --- MIDI processing ---
     def receive_midi(self, data, something):
