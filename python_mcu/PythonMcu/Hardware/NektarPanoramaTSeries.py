@@ -49,8 +49,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     # Nektar Technology Inc -- lookup here: https://www.midi.org/specifications/midi-reference-tables/manufacturer-sysex-id-numbers
     MIDI_MANUFACTURER_ID = [0x00, 0x01, 0x77]
 
-    def __init__(self, midi_input, midi_output, patch, controller):
-        super().__init__(midi_input, midi_output)
+    def __init__(self, midi_port, patch, controller):
+        super().__init__(midi_port, midi_port)
         self.controller = controller
         self.active_track = 1
         self.mode = "mixer"
@@ -125,7 +125,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self.midi_state = MIDI_DISCONNECTED
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
-        self.midi_output = midi_output
+        self.midi_port = midi_port
         self.midi_connect()
 
     def try_connection(self):
@@ -142,7 +142,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if self.midi_output in port:
+            if self.midi_port in port:
                 self.port_num = i
                 break
         self._log("the port number is %s" % self.port_num)
