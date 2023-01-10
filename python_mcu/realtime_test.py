@@ -131,7 +131,7 @@ class APIClient(object):
                 message.pop(-1)
         return message
 
-    def await(self, command, timeout=1):
+    def wait_on(self, command, timeout=1):
         total = 0
         wait = 0.005
         while not self.populated[command] and total < timeout:
@@ -140,7 +140,7 @@ class APIClient(object):
         if total >= timeout:
             raise TimeoutException("query %s timed out")
 
-    def await_item(self, command, timeout=1, item=None):
+    def wait_on_item(self, command, timeout=1, item=None):
         total = 0
         wait = 0.005
         while self.populated[command].indexOf(item) < 0 and total < timeout:
@@ -159,7 +159,7 @@ class APIClient(object):
 
     def do_HANDSHAKE(self):
         self.send_HANDSHAKE()
-        self.await('HANDSHAKE')
+        self.wait_on('HANDSHAKE')
         return self.populated['HANDSHAKE']
 
     def send_QUERY_NUM_CHAINS(self):
@@ -175,7 +175,7 @@ class APIClient(object):
 
     def do_QUERY_NUM_CHAINS(self):
         self.send_QUERY_NUM_CHAINS()
-        self.await('QUERY_NUM_CHAINS')
+        self.wait_on('QUERY_NUM_CHAINS')
         return self.count_chains
 
     def send_QUERY_CHAIN_CONTROLS(self, channel):
@@ -210,7 +210,7 @@ class APIClient(object):
 
     def do_QUERY_CHAIN_CONTROLS(self, channel):
         self.send_QUERY_CHAIN_CONTROLS(channel)
-        self.await_item("QUERY_CHAIN_CONTROLS", item=channel)
+        self.wait_on_item("QUERY_CHAIN_CONTROLS", item=channel)
         return self.chain_controls[channel]
 
     def do_QUERY_CHAIN_CONTROLS_ALL(self):
@@ -231,7 +231,7 @@ class APIClient(object):
 
     def do_QUERY_CHAIN_CHANNELS(self):
         self.send_QUERY_CHAIN_CHANNELS()
-        self.await("QUERY_CHAIN_CHANNELS")
+        self.wait_on("QUERY_CHAIN_CHANNELS")
         return self.chain_channels
 
     def send_QUERY_CHAIN_ENGINES(self):
@@ -257,7 +257,7 @@ class APIClient(object):
 
     def do_QUERY_CHAIN_ENGINES(self):
         self.send_QUERY_CHAIN_ENGINES()
-        self.await("QUERY_CHAIN_ENGINES")
+        self.wait_on("QUERY_CHAIN_ENGINES")
         return self.chain_engines
             
 PRETTY_LOOKUP = {
