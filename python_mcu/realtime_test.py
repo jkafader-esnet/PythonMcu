@@ -293,7 +293,7 @@ class ZynMCUController(object):
         if self.port_num is None:
             sys.exit("couldn't find appropriate port")
         self.midiout.open_port(self.port_num)
-        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", self.log_wrapper, patch, controller=self)
+        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", patch, controller=self)
 
     def send_midi(self, message):
         self.midiout.send_message(message)
