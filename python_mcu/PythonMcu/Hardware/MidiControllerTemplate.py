@@ -66,7 +66,7 @@ class MidiControllerTemplate:
 
         self._show_overlay = [False, False]
 
-        self._log('Initialising MIDI ports...', True)
+        self._log('Initialising MIDI ports...')
         self._midi_input_name = midi_input_name
         self._midi_output_name = midi_output_name
         self.midi = {}
@@ -104,19 +104,19 @@ class MidiControllerTemplate:
         self.interconnector = None
 
     def connect(self):
-        self._log('Opening MIDI ports...', True)
+        self._log('Opening MIDI ports...')
         self.midi.connect(self._midi_input_name, self._midi_output_name)
 
     def disconnect(self):
         self._log('Closing MIDI ports...')
         self.midi.disconnect()
-        self._log('Disconnected.', True)
+        self._log('Disconnected.')
 
     def go_online(self):
-        self._log('Mackie Host Control went online...', True)
+        self._log('Mackie Host Control went online...')
 
     def go_offline(self):
-        self._log('Mackie Host Control went offline...', True)
+        self._log('Mackie Host Control went offline...')
 
     # --- abilities of hardware controller ---
     def has_display_7seg(self):
