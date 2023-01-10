@@ -371,7 +371,7 @@ class ZynMCUController(object):
                     self.logger.info("Our hardware is not MCU connected. Doing MCU connect...")
                     self.hardware.mcu_connect()
                 if not self.client.query_state == ALL_RESOLVED:
-                    if self.client.midi_state == DISCONNECTED
+                    if self.client.midi_state == DISCONNECTED:
                         self.logger.info("Our client is not resolved and not connected. Doing MIDI connect...")
                         self.client.midi_connect()
                     if self.client.midi_state == CONNECTED:
