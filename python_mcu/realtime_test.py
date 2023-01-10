@@ -29,7 +29,7 @@ ALL_RESOLVED = 2
 COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
 
 logger = logging.getLogger("MCU Controller")
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 class TimeoutException(Exception):
     pass
@@ -155,10 +155,12 @@ class APIClient(object):
         self.send([command, self.client_id, self.txn_id, self.seq_id])
 
     def receive_HANDSHAKE(self, message):
-        self.logger.debug("receive_HANDSHAKE %s", message)
+        #self.logger.debug("receive_HANDSHAKE %s", message)
         self.populated['HANDSHAKE'] = True
 
     def do_HANDSHAKE(self):
+        if self.populated['HANDSHAKE']:
+            return self.populated['HANDSHAKE']
         self.send_HANDSHAKE()
         self.wait_on('HANDSHAKE')
         return self.populated['HANDSHAKE']
@@ -170,11 +172,13 @@ class APIClient(object):
     def receive_QUERY_NUM_CHAINS(self, message):
         self.logger.warning("receive_QUERY_NUM_CHAINS %s", message)
         self.count_chains = message[4]
-        self.logger.debug("there are currently %s total root chains" % self.count_chains)
+        #self.logger.debug("there are currently %s total root chains" % self.count_chains)
         if self.count_chains:
             self.populated['QUERY_NUM_CHAINS'] = True
 
     def do_QUERY_NUM_CHAINS(self):
+        if self.populated['QUERY_NUM_CHAINS']:
+            return self.count_chains
         self.send_QUERY_NUM_CHAINS()
         self.wait_on('QUERY_NUM_CHAINS')
         return self.count_chains
@@ -184,7 +188,7 @@ class APIClient(object):
         self.send([command, self.client_id, self.txn_id, self.seq_id, channel])
 
     def receive_QUERY_CHAIN_CONTROLS(self, message):
-        self.logger.debug("receive_QUERY_CHAIN_CONTROLS %s", message)
+        #self.logger.debug("receive_QUERY_CHAIN_CONTROLS %s", message)
         chain_channel = message[4]
         chain_controls_response = self.bytes_to_dict(message[5:])
         self.chain_controls[chain_channel] = {}
@@ -215,6 +219,8 @@ class APIClient(object):
         return self.chain_controls[channel]
 
     def do_QUERY_CHAIN_CONTROLS_ALL(self):
+        if self.populated['QUERY_CHAIN_CONTROLS_ALL']:
+            return self.chain_controls
         if self.populated['QUERY_CHAIN_CHANNELS']:
             for channel in self.chain_channels:
                 self.do_QUERY_CHAIN_CONTROLS(channel)
@@ -224,13 +230,15 @@ class APIClient(object):
         self.send([command, self.client_id, self.txn_id, self.seq_id])
 
     def receive_QUERY_CHAIN_CHANNELS(self, message):
-        self.logger.debug("receive_QUERY_CHAIN_CHANNELS %s", message)
+        #self.logger.debug("receive_QUERY_CHAIN_CHANNELS %s", message)
         self.chain_channels = message[4:]
         print("chains are on channels %s" % self.chain_channels)
         if self.chain_channels:
             self.populated['QUERY_CHAIN_CHANNELS'] = True
 
     def do_QUERY_CHAIN_CHANNELS(self):
+        if self.populated['QUERY_CHAIN_CHANNELS']:
+            return self.chain_channels
         self.send_QUERY_CHAIN_CHANNELS()
         self.wait_on("QUERY_CHAIN_CHANNELS")
         return self.chain_channels
@@ -250,13 +258,15 @@ class APIClient(object):
         return out
     
     def receive_QUERY_CHAIN_ENGINES(self, message):
-        self.logger.debug("receive_QUERY_CHAIN_ENGINES: %s", message)
+        #self.logger.debug("receive_QUERY_CHAIN_ENGINES: %s", message)
         self.chain_engines = self.bytes_to_dict(message[4:])
         self.logger.info("chain engines: %s" % self.chain_engines)
         if self.chain_engines:
             self.populated['QUERY_CHAIN_ENGINES'] = True
 
     def do_QUERY_CHAIN_ENGINES(self):
+        if self.populated['QUERY_CHAIN_ENGINES']:
+            return self.chain_engines
         self.send_QUERY_CHAIN_ENGINES()
         self.wait_on("QUERY_CHAIN_ENGINES")
         return self.chain_engines
@@ -273,7 +283,7 @@ PRETTY_LOOKUP = {
 class ZynMCUController(object):
     def __init__(self):
         self.logger = logger
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.INFO)
 
         patch = 'Pianoteq'
         self.client = None
@@ -389,7 +399,6 @@ class ZynMCUController(object):
                         self.logger.info("Our client is fully resolved. Closing MIDI connection...")
                         self.client.midi_disconnect() # don't tie up the connection
                 time.sleep(0.5)
-                self.logger.debug('looping...')
         except KeyboardInterrupt:
             print("Interrupted!")
         except Exception as e:
