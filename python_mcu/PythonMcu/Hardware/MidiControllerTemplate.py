@@ -32,6 +32,9 @@ if __name__ == "__main__":
 
 #from PythonMcu.Midi.MidiConnection import MidiConnection
 
+import logging
+logger = logging.getLogger("MCU Controller")
+logging.basicConfig(level=logging.DEBUG)
 
 class MidiControllerTemplate:
     MIDI_MANUFACTURER_ID = None
@@ -48,8 +51,8 @@ class MidiControllerTemplate:
         0x7F: 'on'
     }
 
-    def __init__(self, midi_input_name, midi_output_name, callback_log):
-        self.callback_log = callback_log
+    def __init__(self, midi_input_name, midi_output_name):
+        self.callback_log = logger.debug
 
         # LCD has 2 rows with 56 characters each, fill with spaces
         self._lcd_characters = [' '] * 2
@@ -91,7 +94,7 @@ class MidiControllerTemplate:
         return ''
 
     def _log(self, message, repaint=False):
-        self.callback_log('[Controller Template]  ' + message, repaint)
+        self.callback_log('[Controller Template]  ' + message)
 
     # --- initialisation ---
     def set_interconnector(self, host):

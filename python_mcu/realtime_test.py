@@ -1,5 +1,6 @@
 from PythonMcu.Hardware import NektarPanoramaTSeries
 from PythonMcu.configuration.patches import control_mapping
+from PythonMcu.configuration.midi_states import MIDI_CONNECTING, MIDI_DISCONNECTING, MIDI_DISCONNECTED, MIDI_CONNECTED
 import liblo
 
 import sys
@@ -22,10 +23,24 @@ COMMANDS = {
     'SET_CHAIN_PATCH': 0x71,
 }
 
+UNRESOLVED = 0
+PART_RESOLVED = 1
+ALL_RESOLVED = 2
+
 COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
+
+logging.getLogger("MCU Controller")
+logging.basicConfig(level=logging.DEBUG)
+
+TimeoutException(Exception):
+    pass
 
 class APIClient(object):
     def __init__(self):
+        # states for state machine control
+        self.query_state = UNRESOLVED
+        self.midi_state = MIDI_DISCONNECTED
+
         self.syx = 0xF0
         self.txn_id = 0
         self.seq_id = 0
@@ -41,13 +56,15 @@ class APIClient(object):
         self.populated = { command: False for command in COMMANDS }
         self.populated['QUERY_CHAIN_CONTROLS'] = []
         self.populated['QUERY_CHAIN_CONTROLS_ALL'] = False
-        
+
         self.chain_controls = {}
-        self.logger = logging.getLogger("Midi IN")
-        logging.basicConfig(level=logging.DEBUG)
+        self.logger = logger
+
+    def midi_connect(self):
+        self.midi_state = MIDI_CONNECTING
         self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
-        self.logger.warning("Available ports: %s", self.port_list)
+        self.logger.info("Available ports: %s", self.port_list)
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
@@ -60,7 +77,16 @@ class APIClient(object):
         self.midiin, self.port_name = open_midiinput(self.port_num)
         self.midiin.ignore_types(sysex=False)
         self.midiin.set_callback(self.receive)
-        self.logger.warning("connected to port %s", self.port_name)
+        self.logger.info("connected to port %s", self.port_name)
+        self.midi_state = MIDI_CONNECTED
+
+    def midi_disconnect():
+        self.midi_state = MIDI_DISCONNECTING
+        self.midiin.close_port()
+        self.midiout.close_port()
+        del self.midiin
+        del self.midiout
+        self.midi_state = MIDI_DISCONNECTED
 
     def receive(self, event, data):
         message, deltatime = event
@@ -105,13 +131,36 @@ class APIClient(object):
                 message.pop(-1)
         return message
 
-    def send_HANDSHAKE(self):
+    def await(self, command, timeout=1):
+        total = 0
+        wait = 0.005
+        while not self.populated[command] and total < timeout:
+            total += wait
+            time.sleep(wait)
+        if total >= timeout:
+            raise TimeoutException("query %s timed out")
+
+    def await_item(self, command, timeout=1, item=None):
+        total = 0
+        wait = 0.005
+        while self.populated[command].indexOf(item) < 0 and total < timeout:
+            total += wait
+            time.sleep(wait)
+        if total >= timeout:
+            raise TimeoutException("query %s timed out")
+
+    def do_HANDSHAKE(self):
         command = COMMANDS['HANDSHAKE']
         self.send([command, self.client_id, self.txn_id, self.seq_id])
 
     def receive_HANDSHAKE(self, message):
-        self.logger.warning("receive_QUERY_NUM_CHAINS %s", message)
+        self.logger.debug("receive_HANDSHAKE %s", message)
         self.populated['HANDSHAKE'] = True
+
+    def do_HANDSHAKE(self):
+        self.send_HANDSHAKE()
+        self.await('HANDSHAKE')
+        return self.populated['HANDSHAKE']
 
     def send_QUERY_NUM_CHAINS(self):
         command = COMMANDS['QUERY_NUM_CHAINS']
@@ -120,16 +169,21 @@ class APIClient(object):
     def receive_QUERY_NUM_CHAINS(self, message):
         self.logger.warning("receive_QUERY_NUM_CHAINS %s", message)
         self.count_chains = message[4]
-        print("there are currently %s total root chains" % self.count_chains)
+        self.logger.debug("there are currently %s total root chains" % self.count_chains)
         if self.count_chains:
             self.populated['QUERY_NUM_CHAINS'] = True
+
+    def do_QUERY_NUM_CHAINS(self):
+        self.send_QUERY_NUM_CHAINS()
+        self.await('QUERY_NUM_CHAINS')
+        return self.count_chains
 
     def send_QUERY_CHAIN_CONTROLS(self, channel):
         command = COMMANDS['QUERY_CHAIN_CONTROLS']
         self.send([command, self.client_id, self.txn_id, self.seq_id, channel])
 
     def receive_QUERY_CHAIN_CONTROLS(self, message):
-        self.logger.warning("receive_QUERY_CHAIN_CONTROLS %s", message)
+        self.logger.debug("receive_QUERY_CHAIN_CONTROLS %s", message)
         chain_channel = message[4]
         chain_controls_response = self.bytes_to_dict(message[5:])
         self.chain_controls[chain_channel] = {}
@@ -145,8 +199,7 @@ class APIClient(object):
                 "min": minval,
                 "max": maxval,
             }
-        self.logger.warning("chain controls %s" % self.chain_controls.keys())
-        self.logger.warning("chain controls %s" % self.chain_controls)
+        self.logger.info("chain controls %s" % self.chain_controls.keys())
         if self.chain_controls[chain_channel]:
             curr_val = self.populated.get('QUERY_CHAIN_CONTROLS', [])
             curr_val.append(chain_channel)
@@ -155,16 +208,31 @@ class APIClient(object):
                 if sorted(list(self.chain_controls.keys())) == sorted(self.chain_channels):
                     self.populated['QUERY_CHAIN_CONTROLS_ALL'] = True
 
+    def do_QUERY_CHAIN_CONTROLS(self, channel):
+        self.send_QUERY_CHAIN_CONTROLS(channel)
+        self.await_item("QUERY_CHAIN_CONTROLS", item=channel)
+        return self.chain_controls[channel]
+
+    def do_QUERY_CHAIN_CONTROLS_ALL(self):
+        if self.populated['QUERY_CHAIN_CHANNELS']:
+            for channel in self.chain_channels:
+                self.do_QUERY_CHAIN_CONTROLS(channel)
+
     def send_QUERY_CHAIN_CHANNELS(self):
         command = COMMANDS['QUERY_CHAIN_CHANNELS']
         self.send([command, self.client_id, self.txn_id, self.seq_id])
 
     def receive_QUERY_CHAIN_CHANNELS(self, message):
-        self.logger.warning("receive_QUERY_CHAIN_CHANNELS %s", message)
+        self.logger.debug("receive_QUERY_CHAIN_CHANNELS %s", message)
         self.chain_channels = message[4:]
         print("chains are on channels %s" % self.chain_channels)
         if self.chain_channels:
             self.populated['QUERY_CHAIN_CHANNELS'] = True
+
+    def do_QUERY_CHAIN_CHANNELS(self):
+        self.send_QUERY_CHAIN_CHANNELS()
+        self.await("QUERY_CHAIN_CHANNELS")
+        return self.chain_channels
 
     def send_QUERY_CHAIN_ENGINES(self):
         command = COMMANDS['QUERY_CHAIN_ENGINES']
@@ -181,18 +249,17 @@ class APIClient(object):
         return out
     
     def receive_QUERY_CHAIN_ENGINES(self, message):
-        self.logger.warning("receive_QUERY_CHAIN_ENGINES: %s", message)
+        self.logger.debug("receive_QUERY_CHAIN_ENGINES: %s", message)
         self.chain_engines = self.bytes_to_dict(message[4:])
-        self.logger.warning("chain engines: %s" % self.chain_engines)
+        self.logger.info("chain engines: %s" % self.chain_engines)
         if self.chain_engines:
             self.populated['QUERY_CHAIN_ENGINES'] = True
-            
-    def close(self):
-        self.midiin.close_port()
-        self.midiout.close_port()
-        del self.midiin
-        del self.midiout
 
+    def do_QUERY_CHAIN_ENGINES(self):
+        self.send_QUERY_CHAIN_ENGINES()
+        self.await("QUERY_CHAIN_ENGINES")
+        return self.chain_engines
+            
 PRETTY_LOOKUP = {
     "PT": "Pianoteq",
     "BF": "B3 Organ",
@@ -209,13 +276,14 @@ class ZynMCUController(object):
 
         patch = 'Pianoteq'
         self.client = None
+        self.hardware = NektarPanoramaTSeries("PANORAMA T6 Mixer", "PANORAMA T6 Mixer", patch, controller=self)
         
         self.addr=liblo.Address('osc.udp://localhost:1370')
         self.curr_instrument = 0
 
         self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
-        self.logger.warning("Available ports: %s", self.port_list)
+        self.logger.info("Available ports: %s", self.port_list)
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
@@ -252,12 +320,8 @@ class ZynMCUController(object):
         self.midiout.send_message([0xB1, cc, value]) # currently, always channel 2. Channel 1 is ignored by configuration
 
     def send_midi_panic(self):
-        self.midiout.send_message([0xBF, 0x78, 0x00])
-        self.midiout.send_message([0xBF, 0x7B, 0x00])
-
-    def do_full_panic(self):
-        self.send_midi_panic()
-        self.poll_api_until_ready()
+        self.send_midi([0xBF, 0x78, 0x00])
+        self.send_midi([0xBF, 0x7B, 0x00])
 
     def get_current_instrument_channel(self):
         return self.client.chain_channels[self.curr_instrument]
@@ -282,71 +346,52 @@ class ZynMCUController(object):
         for local_control, zyn_control in control_mapping.get(curr_inst, {}).items():
             output[local_control] = zyn_controls.get(zyn_control, {"cc": None, "min": 0, "max": 0, "cur": 0 })
         return output
-        
-    def log_wrapper(self, message, discard):
-        self.logger.warning(message)
 
-    def start(self):
-        self.await_hardware()
-        
-    def await_hardware(self):
-        while not self.hardware.is_midi_connected:
-            self.logger.warning("Awaiting hardware connection...")
-            self.hardware.try_connection()
-            time.sleep(0.5)
-        self.poll_api_until_ready()
+    def run_forever(self):
+        client_methods = [
+            'do_HANDSHAKE',
+            'do_QUERY_NUM_CHAINS',
+            'do_QUERY_CHAIN_CHANNELS',
+            'do_QUERY_CHAIN_ENGINES',
+            'do_QUERY_CHAIN_CONTROLS_ALL',
+        ]
+        client_queries_to_resolve = [
+            'HANDSHAKE',
+            'QUERY_NUM_CHAINS',
+            'QUERY_CHAIN_CHANNELS',
+            'QUERY_CHAIN_ENGINES',
+            'QUERY_CHAIN_CONTROLS_ALL',
+        ]
+        try:
+            while True:
+                if self.hardware.state == MIDI_DISCONNECTED:
+                    self.logger.info("Our hardware is not connected. Doing MIDI connect...")
+                    self.hardware.midi_connect()
+                if self.hardware.state == MIDI_CONNECTED:
+                    self.logger.info("Our hardware is not MCU connected. Doing MCU connect...")
+                    self.hardware.mcu_connect()
+                if not self.client.query_state == ALL_RESOLVED:
+                    if self.client.midi_state == DISCONNECTED
+                        self.logger.info("Our client is not resolved and not connected. Doing MIDI connect...")
+                        self.client.midi_connect()
+                    if self.client.midi_state == CONNECTED:
+                        self.logger.info("Our client is connected but not resolved. Doing queries...")
+                        if all([self.client.populated.get(key) for key in client_queries_to_resolve]):
+                            self.client.query_state = ALL_RESOLVED
+                        for method in client_methods:
+                            getattr(self.client, method)()
+                if self.client.query_state == ALL_RESOLVED:
+                    self.logger.info("Our client is fully resolved. Closing MIDI connection...")
+                    self.client.midi_disconnect() # don't tie up the connection
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("Interrupted!")
+        finally:
+            controller.disconnect()
+            if hasattr(controller.hardware.timer, "cancel"):
+                controller.hardware.timer.cancel()
+            print("Exiting...")
+            sys.exit()
 
-
-    def poll_api_until_ready(self):
-        self.client = APIClient()
-        while not self.client.populated['HANDSHAKE'] or \
-              not self.client.populated['QUERY_NUM_CHAINS'] or \
-              not self.client.populated['QUERY_CHAIN_CHANNELS'] or \
-              not self.client.populated['QUERY_CHAIN_ENGINES'] or \
-              not self.client.populated['QUERY_CHAIN_CONTROLS_ALL']:
-            if not self.client.populated['HANDSHAKE']:
-                self.client.send_HANDSHAKE()
-            if not self.client.populated['QUERY_NUM_CHAINS']:
-                self.client.send_QUERY_NUM_CHAINS()
-            if not self.client.populated['QUERY_CHAIN_CHANNELS']:
-                self.client.send_QUERY_CHAIN_CHANNELS()
-            if not self.client.populated['QUERY_CHAIN_ENGINES']:
-                self.client.send_QUERY_CHAIN_ENGINES()
-            if self.client.populated['QUERY_CHAIN_CHANNELS']:
-                if not self.client.populated['QUERY_CHAIN_CONTROLS_ALL']:
-                    for channel in self.client.chain_channels:
-                        self.client.send_QUERY_CHAIN_CONTROLS(channel)
-            time.sleep(0.1)
-            self.logger.warning("looping...")
-        self.logger.warning("exited loop...")
-        self.client.close()
-        self.logger.warning("client is closed")
-        # Now we're ready, do ready.
-        self.ready()
-
-    def ready(self):
-        self.logger.warning('looks like we are ready...')
-        self.hardware.connect()
-        
-    def disconnect(self):
-        self.hardware.disconnect()
-        
-
-try:
-    controller = ZynMCUController()
-    while True:
-        controller.await_hardware()
-        while controller.hardware.is_midi_connected:
-            controller.hardware.check_connection()
-            controller.logger.warning('Check complete, still connected.')
-            time.sleep(5)
-        time.sleep(1)
-except KeyboardInterrupt:
-    print("Interrupted")
-finally:
-    controller.disconnect()
-    if hasattr(controller.hardware.timer, "cancel"):
-        controller.hardware.timer.cancel()
-    print("Exiting...")
-    sys.exit()
-
+controller = ZynMCUController()
+controller.run_forever()
