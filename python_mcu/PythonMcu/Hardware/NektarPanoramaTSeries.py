@@ -581,6 +581,43 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def resolve_track_setter(self, func_name):
         return getattr(self, func_name)
 
+    def set_button_labels(self, labels):
+        # full packet
+        # F0 00 01 77 7F 01 06 00 04 00 04 00 00 00 01 00 01 03 50 41 4E 00 02 05 53 45 4E 44 53 00 03 00 00 04 05 57 52 49 54 45 00 05 00 F7
+        # F0 00 01 77 7F 01 (header)
+        # 06 00 04 00 04 00 00 00 01 00  # unknown
+        # 01 (first label)
+        # 03 len(label1)
+        # 50 41 4E 00 ("PAN\0")
+        # 02 (second label)
+        # 05 len(label2))
+        # 53 45 4E 44 53 00 ("SENDS\0")
+        # 03 (third label)
+        # 00 (zero length)
+        # 00 (empty string)
+        # 04 (fourth label)
+        # 05 57 52 49 54 45 00
+        # 05 (fifth label?)
+        # 00 (zero length)
+        # (no nul!)
+
+        # need some error handling here: this list must have exactly 5 elements (last is empty string)
+                   #T6?  PAD   L4BTN ?     ?     ?     ?     ?     ?     ?
+        message = [0x06, 0x00, 0x04, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00]
+        offset = 1
+        for name in labels:
+            button_num = 0x00 + offset
+            message.append(button_num)
+            name = name.upper().encode('ascii')
+            length = len(name)
+            message.append(length)
+            message += [char for char in name]
+            offset += 1
+            if(offset <= len(labels)):
+                message.append(0x00)
+
+        self.send_midi(self.standard_syx_header + message + [0xF7])
+
     def render_display(self):
         if self.shift_mode:
             group_data = self.shift[self.selected_group]
