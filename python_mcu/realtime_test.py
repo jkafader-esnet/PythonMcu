@@ -32,7 +32,7 @@ COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
 logging.getLogger("MCU Controller")
 logging.basicConfig(level=logging.DEBUG)
 
-TimeoutException(Exception):
+class TimeoutException(Exception):
     pass
 
 class APIClient(object):
