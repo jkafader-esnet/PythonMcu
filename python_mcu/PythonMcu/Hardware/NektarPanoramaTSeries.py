@@ -123,14 +123,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self._lcd_strings = ['', '']
 
-        self._vpot_modes = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-        self._vpot_positions = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-
-        self._mode_track = self._MODE_TRACK_MUTE_SOLO
-        self._mode_edit = self._MODE_EDIT_OFF
-        self._mode_other = self._MODE_OTHER_OFF
-        self._mode_automap = False
-
         self.midi_state = MIDI_DISCONNECTED
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
         self.midi_output = midi_output
