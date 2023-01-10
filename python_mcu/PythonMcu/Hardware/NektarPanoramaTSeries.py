@@ -40,8 +40,8 @@ import threading
 
 
 import logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("MCU Controller")
-logging.basicConfig(level=logging.DEBUG)
 
 class NektarPanoramaTSeries(MidiControllerTemplate):
     FORMATTED_NAME = "Nektar Panorama T4/T6"
@@ -158,7 +158,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
     def setup_mappings(self):
         mapped_controls = self.controller.get_mapped_instrument_controls()
-        self._log("Mapped controls: %s" % mapped_controls)
         vcontrols = {}
         for name, ctrl in patches[self.current_instrument].items():
             if name not in ["groups", "shift"]:
@@ -173,7 +172,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                         curval = 0
                     if curval >= 127:
                         curval = 127
-                    self._log("setting value for control %s to %s" % (ctrl['name'], curval))
                     vcontrols[name]["value"] = curval
         self.vcontrols = vcontrols
         self.groups = patches[self.current_instrument]["groups"]
