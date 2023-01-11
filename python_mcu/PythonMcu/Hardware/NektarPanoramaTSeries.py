@@ -115,17 +115,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.current_instrument = patch
         self.setup_mappings()
 
-        self.display_lcd_available = True
-        self.automated_faders_available = False
-        self.display_7seg_available = False
-        self.display_timecode_available = False
-        self.meter_bridge_available = False
-
-        self._lcd_strings = ['', '']
-
         self.midi_state = MIDI_DISCONNECTED
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
         self.midi_port = midi_port
+        self._exact_port_name = ''
         self.midi_connect()
 
     def try_connection(self):
@@ -134,21 +127,28 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         except Exception as e:
             self._log("Received exception trying connect: %s" % e)
 
+    def check_midi_connection(self):
+        if not self.midiout:
+            self.disconnect()
+            return
+        if self._exact_port_name not in self.midiout.get_ports():
+            self.disconnect()
+            return
+        
     def midi_connect(self):
         self.midi_state = MIDI_CONNECTING
         self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
-        self._log("Available ports: %s" % self.port_list)
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if self.midi_port in port:
+            if self.midi_port in port and 'RtMidi' not in port:
+                self._exact_port_name = port
                 self.port_num = i
                 break
-        self._log("the port number is %s" % self.port_num)
         if self.port_num is None:
             self.midi_state = MIDI_DISCONNECTED
-            raise Exception("Desired port not available")
+            return
         self.midiout.open_port(self.port_num)
 
         self.midiin, self.port_name = open_midiinput(self.port_num)
@@ -190,7 +190,6 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         return setter
 
     def master_fader_value(self, value):
-        self._log('sending control change for "volume" at %s' % value)
         self.controller.send_control_change("Volume", value)
 
     def toggle_master_button(self, value):
@@ -198,9 +197,9 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self._log("sending normal panic")
             self.controller.send_midi_panic()
         if value == 127 and self.shift_mode:
+            self.shift_mode = False
             self._log("doing full panic")
             self.disconnect()
-            self.midi_connect()
             self.controller.do_full_panic()
 
     def send_midi(self, message):

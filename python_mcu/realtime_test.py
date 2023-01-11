@@ -1,6 +1,6 @@
 from PythonMcu.Hardware import NektarPanoramaTSeries
 from PythonMcu.configuration.patches import control_mapping
-from PythonMcu.configuration.midi_states import MIDI_CONNECTING, MIDI_DISCONNECTING, MIDI_DISCONNECTED, MIDI_CONNECTED
+from PythonMcu.configuration.midi_states import MIDI_CONNECTING, MIDI_DISCONNECTING, MIDI_DISCONNECTED, MIDI_CONNECTED, MCU_CONNECTED
 import liblo
 
 import sys
@@ -329,6 +329,9 @@ class ZynMCUController(object):
             return
         self.midiout.send_message([0xB1, cc, value]) # currently, always channel 2. Channel 1 is ignored by configuration
 
+    def do_full_panic(self):
+        self.client = APIClient()
+
     def send_midi_panic(self):
         self.send_midi([0xBF, 0x78, 0x00])
         self.send_midi([0xBF, 0x7B, 0x00])
@@ -375,11 +378,13 @@ class ZynMCUController(object):
         try:
             while True:
                 if self.hardware.midi_state == MIDI_DISCONNECTED:
-                    self.logger.info("Our hardware is not connected. Doing MIDI connect...")
+                    self.logger.info("Waiting for hardware MIDI connect...")
                     self.hardware.midi_connect()
                 if self.hardware.midi_state == MIDI_CONNECTED:
                     self.logger.info("Our hardware is not MCU connected. Doing MCU connect...")
                     self.hardware.mcu_connect()
+                if self.hardware.midi_state in [MIDI_CONNECTED, MCU_CONNECTED]:
+                    self.hardware.check_midi_connection()
                 if not self.client:
                     self.client = APIClient()
                 if not self.client.query_state == ALL_RESOLVED:
