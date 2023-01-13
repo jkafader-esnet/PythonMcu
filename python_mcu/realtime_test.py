@@ -26,6 +26,9 @@ UNRESOLVED = 0
 PART_RESOLVED = 1
 ALL_RESOLVED = 2
 
+LOADING = 0
+READY = 1
+
 COMMAND_REVERSE = { v: k for k, v in COMMANDS.items() }
 
 logger = logging.getLogger("MCU Controller")
@@ -52,6 +55,8 @@ class APIClient(object):
         self.footer = [0xF7]
         self.client_id = 0x3F
 
+        self.port_name = "Zynthian MIDI Sysex API"
+
         self.populated = { command: False for command in COMMANDS }
         self.populated['QUERY_CHAIN_CONTROLS'] = []
         self.populated['QUERY_CHAIN_CONTROLS_ALL'] = False
@@ -61,22 +66,23 @@ class APIClient(object):
 
     def midi_connect(self):
         self.midi_state = MIDI_CONNECTING
-        self.midiout = rtmidi.MidiOut()
+        if not hasattr(self, "midiout"):
+            self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
-        self.logger.info("Available ports: %s", self.port_list)
         self.port_num = None
         for i in range(len(self.port_list)):
             port = self.port_list[i]
-            if "Sysex API" in port:
+            if self.port_name in port:
                 self.port_num = i
                 break
         if self.port_num is None:
-            sys.exit("couldn't find appropriate port")
+            self.midi_state = MIDI_DISCONNECTED
+            return
         self.midiout.open_port(self.port_num)
-        self.midiin, self.port_name = open_midiinput(self.port_num)
+        self.midiin, port_name = open_midiinput(self.port_name, interactive=False)
         self.midiin.ignore_types(sysex=False)
         self.midiin.set_callback(self.receive)
-        self.logger.info("connected to port %s", self.port_name)
+        self.logger.info("connected to port %s", port_name)
         self.midi_state = MIDI_CONNECTED
 
     def midi_disconnect(self):
@@ -132,23 +138,23 @@ class APIClient(object):
                 message.pop(-1)
         return message
 
-    def wait_on(self, command, timeout=1):
+    def wait_on(self, command, timeout=2):
         total = 0
         wait = 0.005
         while not self.populated[command] and total < timeout:
             total += wait
             time.sleep(wait)
         if total >= timeout:
-            raise TimeoutException("query %s timed out")
+            raise TimeoutException("query %s timed out" % command)
 
-    def wait_on_item(self, command, timeout=1, item=None):
+    def wait_on_item(self, command, timeout=2, item=None):
         total = 0
         wait = 0.005
         while item not in self.populated[command] and total < timeout:
             total += wait
             time.sleep(wait)
         if total >= timeout:
-            raise TimeoutException("query %s timed out")
+            raise TimeoutException("item %s for query %s timed out" % (item, command)) 
 
     def send_HANDSHAKE(self):
         command = COMMANDS['HANDSHAKE']
@@ -290,6 +296,7 @@ class ZynMCUController(object):
         
         self.addr=liblo.Address('osc.udp://localhost:1370')
         self.curr_instrument = 0
+        self.send_change_instrument(1)
 
         self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
@@ -307,15 +314,18 @@ class ZynMCUController(object):
 
     def send_midi(self, message):
         self.midiout.send_message(message)
-        
+
+    def send_change_instrument(self, instrument):
+        msg=liblo.Message('/CUIA/LAYER_CONTROL', instrument)
+        liblo.send(self.addr, msg)
+
     def change_instrument(self, increment):
         self.curr_instrument += increment
         if self.curr_instrument >= len(self.client.chain_channels):
             self.curr_instrument = 0
         if self.curr_instrument < 0:
             self.curr_instrument = len(self.client.chain_channels) - 1
-        msg=liblo.Message('/CUIA/LAYER_CONTROL', self.client.chain_channels[self.curr_instrument] + 1)
-        liblo.send(self.addr, msg)
+        self.send_change_instrument(self.client.chain_channels[self.curr_instrument] + 1)
 
     def send_control_change(self, control_name, value):
         zyn_control_name = control_mapping.get(self.get_current_instrument_name(), {}).get(control_name)
@@ -377,6 +387,7 @@ class ZynMCUController(object):
         ]
         try:
             while True:
+                # manage Hardware
                 if self.hardware.midi_state == MIDI_DISCONNECTED:
                     self.logger.info("Waiting for hardware MIDI connect...")
                     self.hardware.midi_connect()
@@ -385,6 +396,10 @@ class ZynMCUController(object):
                     self.hardware.mcu_connect()
                 if self.hardware.midi_state in [MIDI_CONNECTED, MCU_CONNECTED]:
                     self.hardware.check_midi_connection()
+                if self.hardware.midi_state == MCU_CONNECTED:
+                    if self.client and self.client.query_state == ALL_RESOLVED:
+                        self.hardware.data_state = READY
+                # manage API Client
                 if not self.client:
                     self.client = APIClient()
                 if not self.client.query_state == ALL_RESOLVED:
@@ -396,9 +411,12 @@ class ZynMCUController(object):
                         if all([self.client.populated.get(key) for key in client_queries_to_resolve]):
                             self.logger.info("All queries appear to be resolved...")
                             self.client.query_state = ALL_RESOLVED
-                        for method in client_methods:
-                            self.logger.info("Doing %s...", method)
-                            getattr(self.client, method)()
+                        try:
+                            for method in client_methods:
+                                self.logger.info("Doing %s...", method)
+                                getattr(self.client, method)()
+                        except TimeoutException as e:
+                            self.logger.warning("%s: %s" % (type(e).__name__, e))
                 if self.client.query_state == ALL_RESOLVED:
                     if self.client.midi_state != MIDI_DISCONNECTED:
                         self.logger.info("Our client is fully resolved. Closing MIDI connection...")
