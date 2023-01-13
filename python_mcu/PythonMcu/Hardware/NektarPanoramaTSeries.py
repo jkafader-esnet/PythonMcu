@@ -38,6 +38,8 @@ import rtmidi
 from rtmidi.midiutil import open_midiinput
 import threading
 
+LOADING = 0
+READY = 1
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -116,6 +118,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.setup_mappings()
 
         self.midi_state = MIDI_DISCONNECTED
+        self.data_state = LOADING
         self.standard_syx_header = [0xF0, 0x00, 0x01, 0x77, 0x7F, 0x01]
         self.midi_port = midi_port
         self._exact_port_name = ''
@@ -137,7 +140,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         
     def midi_connect(self):
         self.midi_state = MIDI_CONNECTING
-        self.midiout = rtmidi.MidiOut()
+        if not hasattr(self, "midiout"):
+            self.midiout = rtmidi.MidiOut()
         self.port_list = self.midiout.get_ports()
         self.port_num = None
         for i in range(len(self.port_list)):
@@ -391,16 +395,31 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         self.mode = "mixer"
         data = [0x06, 0x02, 0x7F, 0x00, 0x00]
         self.send_midi(self.standard_syx_header + data + [0xF7])
-        # wait a while. Don't overload buffer.
-        #time.sleep(0.1)
 
-        #return self.midi.send_sysex(self.standard_syx_header, data)
+    def set_mode_numbered_tracks(self):
+        self.mode = "numbered_tracks"
+        data = [0x06, 0x06, 0x7F, 0x00, 0x00]
+        return self.send_midi(self.standard_syx_header + data + [0xF7])
+        
+    def set_mode_function_screen(self):
+        self.mode = "function_screen"
+        data = [0x06, 0x11, 0x7F, 0x00, 0x00]
+        return self.send_midi(self.standard_syx_header + data + [0xF7])
+
+    def set_mode_grid_screen(self):
+        self.mode = "grid_screen"
+        data = [0x06, 0x15, 0x7F, 0x00, 0x00]
+        return self.send_midi(self.standard_syx_header + data + [0xF7])
+
+    def set_mode_list_screen(self):
+        self.mode = "list_screen"
+        data = [0x06, 0x1A, 0x7F, 0x00, 0x00]
+        return self.send_midi(self.standard_syx_header + data + [0xF7])
 
     def set_pan_mode(self):
         self.mode = "pan"
         data = [0x06, 0x10, 0x7F, 0x00, 0x00]
         return self.send_midi(self.standard_syx_header + data + [0xF7])
-        #return self.midi.send_sysex(self.standard_syx_header, data)
 
     def initialize_controls(self):
         #F0 00 01 77 7F 01 09 06 00 00 01 36 39 F7
@@ -484,7 +503,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
         output = bytes([len(output)]) + output + bytes([0])
         return output
 
-    def set_display_area(self, area, data):
+    def set_display_area(self, area, data, offset_override=None):
         unimplemented = []
         if(area in unimplemented):
             self._log("XXX: area %s is unimplemented" % area)
@@ -547,7 +566,14 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 "data_length": 4,
                 "offset": 0x04
             },
+            "raw_list_items": {
+                "header": bytes([0x06, 0x00, 0x08]),
+                "data_length": 4,
+                "offset": 0x00
+            },
         }
+        if area == "raw_list_items":
+            self.mode = "raw"
         if area not in areas:
             raise Exception("Display area %s not found" % area)
         data_length = areas[area]['data_length']
@@ -555,7 +581,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             raise Exception("Wrong string count for area %s. You provided %s strings but %s are required" % (area, len(data), areas[area]['data_length']))
         formatter = areas[area].get('format', self.format_string_array)
         header = areas[area]['header']
-        offset = areas[area]['offset']
+        offset = offset_override if offset_override is not None else areas[area]['offset']
         message = header + formatter(data, offset=offset)
         return self.send_midi(self.standard_syx_header + [c for c in message] + [0xF7])
 
@@ -574,6 +600,20 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             track_names += [''] * (8 - len(track_names))
         self.set_display_area("pan_names_1-4", track_names[0:4])
         self.set_display_area("pan_names_5-8", track_names[4:8])
+    
+
+    def set_list_items(self, track_names):
+        if len(track_names) > 8:
+            track_names = track_names[:8]
+        if len(track_names) < 8:
+            track_names += [''] * (8 - len(track_names))
+        base_offset = 8
+        while base_offset <= 127:
+            self.set_display_area("list_items_1-4", track_names[0:4], offset_override=base_offset)
+            self.set_display_area("list_items_5-8", track_names[4:8], offset_override=base_offset+4)
+            base_offset += 8
+            print("base offset is %s" % base_offset)
+            time.sleep(0.5)
     
     def resolve_track_setter(self, func_name):
         return getattr(self, func_name)
@@ -615,6 +655,37 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
 
         self.send_midi(self.standard_syx_header + message + [0xF7])
 
+    def countdown_to_ready(self, seconds=1):
+        if hasattr(self.timer, "cancel"):
+            self.timer.cancel()
+        def disconnect_when_ready():
+            if self.data_state == READY:
+                self.disconnect()
+            else:
+                self.countdown_to_ready(seconds=seconds)
+        self.timer = threading.Timer(seconds, disconnect_when_ready)
+        self.timer.start()
+
+    def render_loading_screen(self):
+        #self.set_display_area("focus_name", ["Loading"])
+        #self.set_display_area("focus_value", ["Please Wait"])
+        #self.set_mode_list_screen()
+        #self.set_display_area("menu_name", ["please", "wait"])
+        #self.set_list_items(["Loading", "Please Wait"])
+        #self.set_mode_numbered_tracks()
+        data = [0x09, 0x06, 0x00, 0x00, 0x01, 0x36, 0x39]
+        self.send_midi(self.standard_syx_header + data + [0xF7])
+        self.send_midi([0xB0, 0x63, 0x7F])
+        data = [0x0D, 0x04, 0x00, 0x00, 0x01, 0x00, 0x6D]
+        self.send_midi(self.standard_syx_header + data + [0xF7])
+        self.set_display_area("raw_list_items", ["Sound Engine", "Loading", "", "Please Wait.."])
+        self.countdown_to_ready()
+        #active_track = 0
+        #while active_track < 8:
+        #    active_track += 1
+        #    self.set_active_track(active_track)
+        #    time.sleep(0.5)
+        
     def render_display(self):
         if self.shift_mode:
             group_data = self.shift[self.selected_group]
@@ -754,7 +825,10 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if message ==  [240, 126, 127, 6, 2, 0, 1, 119, 103, 72, 66, 64, 48, 49, 48, 54, 247]:
                 self.midi_state = MCU_CONNECTED
                 self._log('MCU Connected.')
-                self.initialize_controls()
+                if self.data_state == READY:
+                    self.initialize_controls()
+                if self.data_state == LOADING:
+                    self.render_loading_screen()
         pass
 
     # --- MIDI processing ---
