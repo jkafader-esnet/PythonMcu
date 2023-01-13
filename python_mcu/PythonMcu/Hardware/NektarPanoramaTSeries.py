@@ -229,8 +229,31 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def patch_list(self, *args, **kwargs):
         pass
 
-    def toggle_view(self, *args, **kwargs):
-        self._log("The view button show show all of the active button labels")
+    def toggle_view(self, value):
+        if value == 127:
+            self.view_mode = True
+            self.visible_controls = {}
+            for k, button in self.visible_buttons.items():
+                button['current_screen_position'] = button.get('current_button_position', 0)
+                self.visible_controls[k.replace("B", "F")] = button
+            self.set_mixer_mode()
+            if hasattr(self, "timer"):
+                self.timer.cancel()
+            button_names = []
+            i = 0
+            for name, button in self.visible_buttons.items():
+                i += 1
+                self.set_display_area("focus_name", ["Button View",])
+                self.set_display_area("focus_value", ["",])
+                button_names.append("B%s: %s" % (i, button['name']))
+                setter = self.resolve_track_setter('vtrack_setter') # not button['set'] -- we're setting the mixer track values rather than button lights.
+                set_track = setter(**button['param'])
+                set_track(button['value'], invert=False, changed=False)
+            self.set_track_names(button_names)
+            self.countdown_to_instrument()
+        else:
+            self.view_mode = False
+            self.render_display()
         pass
 
     def display_settings_page(self, *args, **kwargs):
@@ -278,13 +301,13 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
     def set_vtrack_value(self, fader_number, value):
         self.send_midi([0xB0, fader_number, value])
 
-    def vtrack_setter(self, track, invert=False):
+    def vtrack_setter(self, track, invert=False, exclusive_with=[]):
+        # exclusive_with can be ignored here. Introduced for completeness with button params
         def set(value, invert=invert, changed=True):
             if invert:
                 value = 127 - value
             track_name = "F%s" % track
             control = self.visible_controls[track_name]
-            control["value"] = value
             screen_position = control["current_screen_position"]
             if control.get("has_latched") or not changed:
                 control["value"] = value
@@ -294,11 +317,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if changed:
                 self.set_display_area("focus_name", [focus_name,])
                 if not control.get("has_latched"):
-                    if(value < control.get("value")):
-                        self.set_display_area("focus_value", ["- UP -"])
-                    if(value > control.get("value")):
-                        self.set_display_area("focus_value", ["- DOWN -"])
-                    if(value == control.get("value")):
+                    if(value < control.get("value") - 1):
+                        self.set_display_area("focus_value", ["- DOWN -"] if invert else ["- UP -"])
+                    if(value > control.get("value") + 1):
+                        self.set_display_area("focus_value", ["- UP -"] if invert else ["- DOWN -"])
+                    if(value <= control.get("value") + 1 and value >= control.get("value") - 1):
                         control["has_latched"] = True
                 if control.get("has_latched"):
                     self.set_display_area("focus_value", ["%s" % control['value']])
@@ -317,12 +340,12 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.set_display_area("focus_name", ["Instrument:"])
             self.set_display_area("focus_value", [self.current_instrument])
             # correct the values for CC 1 and 2 while we're at it -- they get weird
-            #control_keys = [k for k in self.visible_controls.keys()][0:2]
-            #for key in control_keys:
-            #    value = self.visible_controls[key]["value"]
-            #    setter = self.resolve_track_setter(self.visible_controls[key]['set'])
-            #    set_track = setter(**self.visible_controls[key]["param"])
-            #    set_track(value, invert=False, changed=False)
+            control_keys = [k for k in self.visible_controls.keys()][0:2]
+            for key in control_keys:
+                value = self.visible_controls[key]["value"]
+                setter = self.resolve_track_setter(self.visible_controls[key]['set'])
+                set_track = setter(**self.visible_controls[key]["param"])
+                set_track(value, invert=False, changed=False)
             self.countdown_to_instrument(seconds=seconds)
         self.timer = threading.Timer(seconds, display_instrument)
         self.timer.start()
@@ -381,6 +404,8 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
                 self.controller.send_control_change(control.get("name"), 127 - control.get("value") if invert else control.get("value"))
+                if self.view_mode:
+                    self.toggle_view(127)
         return setter
 
     @staticmethod
@@ -717,6 +742,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if selected_group_name in track["groups"] and name[0] == selector:
                 track_names.append(track["name"])
                 self.visible_controls[name] = track
+                self.visible_controls[name]['has_latched'] = False
                 self.visible_controls[name]["current_screen_position"] = current_position
                 current_position += 1
             if selected_group_name in track["groups"] and name[0] == "B":
