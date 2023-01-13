@@ -261,8 +261,24 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             pass
         return func
 
+    def countdown_to_track_mode(self, seconds=4):
+        if hasattr(self, "timer"):
+            self.timer.cancel()
+        def back_to_last_group():
+            if hasattr(self, "last_group") and self.selected_group != self.last_group:
+                self.selected_group = self.last_group
+                self.render_display()
+            self.countdown_to_instrument()
+        self.timer = threading.Timer(seconds, back_to_last_group)
+        self.timer.start()
+        
     def set_rotary_value(self, track_number):
         def set(value):
+            if self.selected_group != 3:
+                self.last_group = self.selected_group
+                self.selected_group = 3
+                self.render_display()
+                self.countdown_to_track_mode()
             keys = [k for k in self.visible_controls.keys()]
             if track_number >= len(keys):
                 return
@@ -349,7 +365,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             self.countdown_to_instrument(seconds=seconds)
         self.timer = threading.Timer(seconds, display_instrument)
         self.timer.start()
-    
+
     def vpot_setter(self, track, invert=False):
         def set(value, invert=invert, changed=True):
             control_name = "P%s" % track
