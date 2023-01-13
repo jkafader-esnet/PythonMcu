@@ -278,11 +278,11 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
             if track_number >= len(keys):
                 return
             control_key = keys[track_number]
-            func_name = self.vcontrols[control_key]["set"]
-            parameters = self.vcontrols[control_key]["param"]
+            func_name = self.visible_buttons[control_key]["set"]
+            parameters = self.visible_buttons[control_key]["param"]
             if(value): # if this is button _press_ rather than _release_
                 # toggle the value
-                curval = self.vcontrols["B%s" % track_number]["value"]
+                curval = self.visible_buttons[control_key]["value"]
                 newval = 0 if curval == 127 else 127
                 getattr(self, func_name)(**parameters)(newval)
         return setter
@@ -404,7 +404,7 @@ class NektarPanoramaTSeries(MidiControllerTemplate):
                 self.set_display_area("focus_name", [focus_name,])
                 self.set_display_area("focus_value", ["%s" % control['value']])
                 self.controller.send_control_change(control.get("name"), 127 - control.get("value") if invert else control.get("value"))
-                if self.view_mode:
+                if hasattr(self, "view_mode") and self.view_mode:
                     self.toggle_view(127)
         return setter
 
